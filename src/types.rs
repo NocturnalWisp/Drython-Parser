@@ -15,5 +15,5 @@ pub struct ExpressionList
     pub variables: HashMap<usize, (String, String)>,
     pub calls: HashMap<usize, (String, Vec<String>)>,
     pub internal_expressions: HashMap<usize, ExpressionList>,
-    pub if_expression: Option<String>
+    pub scope_expression: Option<String>
 }

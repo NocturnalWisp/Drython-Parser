@@ -1,6 +1,3 @@
-use std::fmt::Arguments;
-use std::fmt::Write;
-
 // Inserts line numbers at the beginning of each line. Uses .lines() (seperated by \n)
 pub fn insert_line_numbers(string: String) -> String
 {
@@ -89,13 +86,28 @@ pub fn ordered_strings_check(string: &str, strings: &[&str]) -> bool
 }
 
 // The following are quick calls for finding certain items within strings
+pub fn check_for_scope(string: &str) -> bool
+{
+    check_for_if(string) || check_for_loop(string)
+}
+
 pub fn check_for_if(string: &str) -> bool
 {
     ordered_strings_check(string, &["if", ":"])
+}
+
+pub fn check_for_loop(string: &str) -> bool
+{
+    ordered_strings_check(string, &["loop", ":"])
 }
 
 // The following are quick calls for finding often used parses.
 pub fn check_for_call(string: &str) -> bool
 {
     ordered_chars_check(string, &['(', ')'])
+}
+
+pub fn check_for_return(string: &str) -> bool
+{
+    string.to_lowercase().starts_with("return")
 }

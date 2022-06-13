@@ -43,9 +43,11 @@ fn parse_expressions(expressions: &Vec<String>, line_start:usize, if_expression:
     let mut calls: HashMap<usize, (String, Vec<String>)> = HashMap::new();
     let mut internal_expressions: HashMap<usize, ExpressionList> = HashMap::new();
 
-    let mut inside_if = false;
-    let mut if_start = 0;
-    let mut if_internal_count = 0;
+    // For internal expressions lists.
+    // Will be split out for parsing once the end is found.
+    let mut inside_scope = false;
+    let mut scope_start = 0;
+    let mut scope_count = 0;
 
     // The actual order index that each expression will use.
     // (i in the enumerate is unrealiable with nested blocks.)
@@ -53,44 +55,58 @@ fn parse_expressions(expressions: &Vec<String>, line_start:usize, if_expression:
 
     for (i, exp) in expressions.iter().enumerate()
     {
-        if inside_if
+        if inside_scope
         {
-            if utility::check_for_if(exp)
+            if utility::check_for_scope(exp)
             {
-                if_internal_count += 1;
+                scope_count += 1;
             }
 
+            println!("{}", exp.to_lowercase());
             if exp.to_lowercase() == "end"
             {
-                if if_internal_count == 0
+                if scope_count == 0
                 {
-                    let if_str = expressions[if_start].clone();
-                    let if_expression = if_str
-                        .trim_start_matches("if").trim_end_matches(":");
+                    let scope_str = expressions[scope_start].clone();
+                    let scope_expression = scope_str.trim_end_matches(":");
                     internal_expressions.insert(operation_index, 
                         parse_expressions(
-                            &expressions[if_start+1..i].to_vec(),
-                            if_start+1+line_start,
-                            Some(if_expression.to_string()),
+                            &expressions[scope_start+1..i].to_vec(),
+                            scope_start+1+line_start,
+                            Some(scope_expression.to_string()),
                             error_list
                         )
                     );
-                    inside_if = false;
+                    inside_scope = false;
                     operation_index += 1;
                 }
                 else
                 {
-                    if_internal_count -= 1;
+                    scope_count -= 1;
                 }
             }
         }
         else
         {
-            // Conditional (If).
-            if utility::check_for_if(exp)
+            // Scope change (if/loop).
+            if utility::check_for_scope(exp)
             {
-                if_start = i;
-                inside_if = true;
+                println!("Yeah!");
+                scope_start = i;
+                inside_scope = true;
+            }
+            // Return operation.
+            else if utility::check_for_return(exp)
+            {
+                match parse_return(exp)
+                {
+                    Ok(result) => 
+                    {
+                        calls.insert(operation_index, ("return".to_string(), vec![result.to_string()]));
+                        operation_index += 1;
+                    }
+                    Err(error) => {error_list.insert(line_start+i, error);}
+                }
             }
             // Function call.
             else if utility::check_for_call(exp)
@@ -121,7 +137,7 @@ fn parse_expressions(expressions: &Vec<String>, line_start:usize, if_expression:
         }
     }
 
-    ExpressionList { variables: vars, calls, internal_expressions, if_expression }
+    ExpressionList { variables: vars, calls, internal_expressions, scope_expression: if_expression }
 }
 
 // Parses a function call into the name of the function, and the arguments.
@@ -149,4 +165,13 @@ fn parse_call(call: &str) -> Result<(String, Vec<String>), String>
     }
 
     Ok((function, arguments))
+}
+
+fn parse_return(statement: &str) -> Result<&str, String>
+{
+    let expression: &str;
+    
+    expression = statement.trim_start_matches("return");
+
+    Ok(expression)
 }

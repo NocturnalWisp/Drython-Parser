@@ -78,8 +78,8 @@ impl Parser
         let mut inside_func = false;
         let mut found_func: Vec<&str> = vec![];
         let mut func_start = 0;
-        // How many times to find end before finding the functions end.
-        let mut func_internal_count = 0;
+        // Keeps count of internal scopes so as to not end at the wrong "end"
+        let mut scope_count = 0;
 
         let lines: Vec<&str> = contents.split(";").collect();
         for whole_line in lines
@@ -96,14 +96,14 @@ impl Parser
 
             if inside_func
             {
-                if utility::check_for_if(line)
+                if utility::check_for_scope(line)
                 {
-                    func_internal_count += 1;
+                    scope_count += 1;
                 }
 
                 if line.to_lowercase() == "end"
                 {
-                    if func_internal_count == 0
+                    if scope_count == 0
                     {
                         inside_func = false;
 
@@ -134,7 +134,7 @@ impl Parser
                     }
                     else
                     {
-                        func_internal_count -= 1;
+                        scope_count -= 1;
                         found_func.push(line);
                     }
                     
@@ -170,6 +170,8 @@ impl Parser
                 }
             }
         }
+
+        println!("{:#?}", contents);
 
         Ok(Parser
         {

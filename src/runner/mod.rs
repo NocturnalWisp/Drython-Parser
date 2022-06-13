@@ -7,6 +7,7 @@ pub mod utility;
 mod parser;
 
 mod var;
+mod func;
 
 use parser::Parser;
 
