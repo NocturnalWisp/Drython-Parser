@@ -3,7 +3,7 @@ pub mod utility;
 
 use std::fmt::Write;
 
-pub fn check_var(var: (& String, & String)) -> Result<String, String>
+pub fn check_var(var: (& String, & String), _var_list: &Vec<String>, _func_list: &Vec<String>) -> Result<(), String>
 {
     let initial_msg = "Failed to parse variable:\n";
 
@@ -36,6 +36,6 @@ pub fn check_var(var: (& String, & String)) -> Result<String, String>
         return Err(error_msg);
     }
 
-    Ok(var.0.to_string())
+    Ok(())
 }
 
