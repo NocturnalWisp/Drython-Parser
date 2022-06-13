@@ -1,0 +1,9 @@
+System
+
+six= 6
+six = 9
+
+die():
+    variable = 200*5
+    eat(self)
+end
