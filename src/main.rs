@@ -1,8 +1,7 @@
-pub mod parser;
-pub mod runner;
+pub mod drython;
 
 use std::io::stdin;
-use parser::Parser;
+use drython::parser::Parser;
 
 fn main()
 {
@@ -18,9 +17,8 @@ fn main()
         if !input.trim().is_empty() { break; }
 
         let mut parsed_errors = Vec::new();
-        let parsed = Parser::parse_file("data/test.dry", &mut parsed_errors);
 
-        match parsed
+        match Parser::parse_file("data/test.dry", &mut parsed_errors)
         {
             Result::Ok(result) =>
             {

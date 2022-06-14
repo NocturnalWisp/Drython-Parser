@@ -1,17 +1,13 @@
-#[path="./../types.rs"]
-pub mod types;
-#[path="./../utility.rs"]
-pub mod utility;
-
-mod script_type;
-mod variable_parser;
 mod function_parser;
+mod variable_parser;
 
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
 use std::fs;
 use std::fmt::Write;
-use script_type::ScriptType;
+use super::script_type::ScriptType;
+use super::types;
+use super::utility;
 
 use function_parser::parse_func;
 use variable_parser::parse_var;

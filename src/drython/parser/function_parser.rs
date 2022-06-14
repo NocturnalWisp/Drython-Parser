@@ -26,11 +26,6 @@ pub fn parse_func(lines: &Vec<&str>, error_list: &mut LinkedHashMap<usize, Strin
 
     let expressions: Vec<String> = lines.split_at(1).1.iter().map(|x|x.to_string()).collect();
 
-    if expressions.len() == 0
-    {
-        return Err(("No function body.".to_string(), 1));
-    }
-
     let parsed_expressions =
         parse_expressions(&expressions, 0, None, error_list);
 
@@ -91,7 +86,6 @@ fn parse_expressions(expressions: &Vec<String>, line_start:usize, if_expression:
             // Scope change (if/loop).
             if utility::check_for_scope(exp)
             {
-                println!("Yeah!");
                 scope_start = i;
                 inside_scope = true;
             }
@@ -137,7 +131,7 @@ fn parse_expressions(expressions: &Vec<String>, line_start:usize, if_expression:
         }
     }
 
-    ExpressionList { variables: vars, calls, internal_expressions, scope_expression: if_expression }
+    ExpressionList { variables: vars, calls, internal_expressions, scope_expression: if_expression, size: expressions.len() }
 }
 
 // Parses a function call into the name of the function, and the arguments.

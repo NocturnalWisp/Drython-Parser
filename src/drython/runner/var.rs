@@ -1,9 +1,9 @@
-#[path="./../utility.rs"]
-pub mod utility;
 
 use std::fmt::Write;
 
-pub fn check_var(var: (& String, & String), _var_list: &Vec<String>, _func_list: &Vec<String>) -> Result<(), String>
+use crate::drython::types::RegisteredList;
+
+pub fn check_var<'a>(var: (&'a str, &'a str), registered: &mut RegisteredList<'a>)
 {
     let initial_msg = "Failed to parse variable:\n";
 
@@ -12,19 +12,19 @@ pub fn check_var(var: (& String, & String), _var_list: &Vec<String>, _func_list:
     if var.0.is_empty()
     {
         write!(&mut error_msg, "{}{}", initial_msg, "The variable name is empty.").ok();
-        return Err(error_msg);
+        registered.error_list.push(error_msg.clone());
     }
 
     if var.1.is_empty()
     {
         write!(&mut error_msg, "{}{}", initial_msg, "The variable value is empty.").ok();
-        return Err(error_msg);
+        registered.error_list.push(error_msg.clone());
     }
 
     if !var.0.chars().all(char::is_alphanumeric)
     {
         write!(&mut error_msg, "{}{}", initial_msg, "The variable name contains special characters.").ok();
-        return Err(error_msg);
+        registered.error_list.push(error_msg.clone());
     }
 
     let special_chars = ['+', '-', '*', '/', '%', '|', '&', '^'];
@@ -33,9 +33,9 @@ pub fn check_var(var: (& String, & String), _var_list: &Vec<String>, _func_list:
         || special_chars.contains(&x))
     {
         write!(&mut error_msg, "{}{}", initial_msg, "The variable value contains special characters.").ok();
-        return Err(error_msg);
+        registered.error_list.push(error_msg.clone());
     }
-
-    Ok(())
+    
+    registered.var_list.push(var.0);
 }
 
