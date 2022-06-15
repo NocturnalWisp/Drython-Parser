@@ -2,6 +2,7 @@ pub mod drython;
 
 use std::io::stdin;
 use drython::parser::Parser;
+use linked_hash_map::LinkedHashMap;
 
 fn main()
 {
@@ -16,15 +17,13 @@ fn main()
         // Stop looping if any other input is given than hitting return.
         if !input.trim().is_empty() { break; }
 
-        let mut parsed_errors = Vec::new();
+        let mut parse_warnings: LinkedHashMap<usize, String> = LinkedHashMap::new();
 
-        match Parser::parse_file("data/test.dry", &mut parsed_errors)
+        match Parser::parse_file("data/test.dry", &mut parse_warnings)
         {
             Result::Ok(result) =>
             {
-                println!("{:?}", result.script_type);
-                println!("{:?}", result.parsed_vars);
-                println!("{:#?}", result.parsed_funcs);
+                println!("{:#?}", result);
             },
             Result::Err(error) =>
             {

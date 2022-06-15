@@ -2,37 +2,11 @@ use std::collections::HashMap;
 use linked_hash_map::LinkedHashMap;
 
 use super::utility;
+use super::utility::CheckOption;
 use super::types::ExpressionList;
-use super::types::Func;
 use super::variable_parser::parse_var;
 
-// Function stored format: Name = (Parameters, Expressions)
-// Error format (message, local line, character)
-pub fn parse_func(lines: &Vec<&str>, error_list: &mut LinkedHashMap<usize, String>) -> Result<Func, (String, usize)>
-{
-    if lines.len() == 0
-    {
-        return Err(("Failed to parse function.".to_string(), 0));
-    }
-    
-    let init: Vec<&str> = lines[0].split("(").collect();
-    let name = init[0];
-    let params: Vec<String> = if let Some(p) = init[1].split_once(")")
-    {
-        // Seperate params if there are any.
-        p.0.split(",").into_iter().map(|x|x.to_string()).collect()
-    }
-    else { return Err(("Failed to parse function parameters.".to_string(), 0)); };
-
-    let expressions: Vec<String> = lines.split_at(1).1.iter().map(|x|x.to_string()).collect();
-
-    let parsed_expressions =
-        parse_expressions(&expressions, 0, None, error_list);
-
-    Ok(Func {name: name.to_string(), size: lines.len()-1, parameters: params, expressions: parsed_expressions})
-}
-
-fn parse_expressions(expressions: &Vec<String>, line_start:usize, if_expression:Option<String>, error_list:&mut LinkedHashMap<usize, String>) -> ExpressionList
+pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_list:&mut LinkedHashMap<usize, String>) -> ExpressionList
 {
     let mut vars: HashMap<usize, (String, String)> = HashMap::new();
     let mut calls: HashMap<usize, (String, Vec<String>)> = HashMap::new();
@@ -47,9 +21,19 @@ fn parse_expressions(expressions: &Vec<String>, line_start:usize, if_expression:
     // The actual order index that each expression will use.
     // (i in the enumerate is unrealiable with nested blocks.)
     let mut operation_index = 0;
-
-    for (i, exp) in expressions.iter().enumerate()
+    
+    for (i, expression) in expressions.iter().enumerate()
     {
+        if expression.len() <= 2 {continue;}
+
+        let exp;
+
+        if let Some(result) = expression.split_once(")")
+        {
+            exp = result.1;
+        }
+        else {continue;}
+
         if inside_scope
         {
             if utility::check_for_scope(exp)
@@ -57,21 +41,24 @@ fn parse_expressions(expressions: &Vec<String>, line_start:usize, if_expression:
                 scope_count += 1;
             }
 
-            println!("{}", exp.to_lowercase());
             if exp.to_lowercase() == "end"
             {
                 if scope_count == 0
                 {
-                    let scope_str = expressions[scope_start].clone();
-                    let scope_expression = scope_str.trim_end_matches(":");
-                    internal_expressions.insert(operation_index, 
-                        parse_expressions(
-                            &expressions[scope_start+1..i].to_vec(),
-                            scope_start+1+line_start,
-                            Some(scope_expression.to_string()),
-                            error_list
-                        )
+                    let mut internal_expression = parse_expressions(
+                        &expressions[scope_start+1..i].to_vec(),
+                        scope_start+1+line_start,
+                        warning_list
                     );
+
+                    match parse_scope(&expressions[scope_start])
+                    {
+                        Ok(result) => {internal_expression.scope_info = result;}
+                        Err(error) => {warning_list.insert(line_start, error);}
+                    }
+
+                    internal_expressions.insert(operation_index, internal_expression);
+
                     inside_scope = false;
                     operation_index += 1;
                 }
@@ -99,7 +86,7 @@ fn parse_expressions(expressions: &Vec<String>, line_start:usize, if_expression:
                         calls.insert(operation_index, ("return".to_string(), vec![result.to_string()]));
                         operation_index += 1;
                     }
-                    Err(error) => {error_list.insert(line_start+i, error);}
+                    Err(error) => {warning_list.insert(line_start+i, error);}
                 }
             }
             // Function call.
@@ -112,7 +99,7 @@ fn parse_expressions(expressions: &Vec<String>, line_start:usize, if_expression:
                         calls.insert(operation_index, (result.0, result.1));
                         operation_index += 1;
                     },
-                    Err(error) => {error_list.insert(line_start+i, error);}
+                    Err(error) => {warning_list.insert(line_start+i, error);}
                 }
             }
             // Variable assignment.
@@ -125,13 +112,75 @@ fn parse_expressions(expressions: &Vec<String>, line_start:usize, if_expression:
                         vars.insert(operation_index, (result.0, result.1));
                         operation_index += 1;
                     },
-                    Err(error) => {error_list.insert(line_start+i, error);}
+                    Err(error) => {warning_list.insert(line_start+i, error);}
                 }
             }
         }
     }
 
-    ExpressionList { variables: vars, calls, internal_expressions, scope_expression: if_expression, size: expressions.len() }
+    ExpressionList
+    {
+        scope_info: (None, None),
+        size: operation_index,
+        variables: vars,
+        calls,
+        internal_expressions,
+    }
+}
+
+fn parse_scope(expression: &str) -> Result<(Option<String>, Option<String>), String>
+{
+    let exp;
+
+    if let Some(result) = expression.split_once(")")
+    {
+        exp = result.1;
+    }
+    else {return Ok((None, None));}
+
+    // Loop
+    if let CheckOption::Split(result) = 
+        utility::ordered_strings_check(exp, &["loop", ":"], true)
+    {
+        return handle_scope_result(&result);
+    }
+    // If
+    if let CheckOption::Split(result) = 
+        utility::ordered_strings_check(exp, &["if", ":"], true)
+    {
+        return handle_scope_result(&result);
+    }
+    // Function
+    if let CheckOption::Split(result) = 
+        utility::ordered_chars_check(exp, &[b'(', b')', b':'], true)
+    {
+        println!("{:?}", result);
+        return handle_scope_result(&result);
+    }
+
+    Ok((None, None))
+}
+
+fn handle_scope_result(result: &Vec<&str>) -> Result<(Option<String>, Option<String>), String>
+{
+    let mut scope: Option<String> = None;
+    let mut arguments: Option<String> = None;
+
+    if result.len() >= 1 && !result[0].is_empty()
+    {
+        scope = Some(result[0].to_string());
+
+        if result.len() == 2 && !result[1].is_empty()
+        {
+            arguments = Some(result[1].to_string());
+        }
+    }
+    else
+    {
+        return Ok((None, None));
+    }
+
+    Ok((scope, arguments))
 }
 
 // Parses a function call into the name of the function, and the arguments.

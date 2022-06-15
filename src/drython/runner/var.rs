@@ -11,8 +11,7 @@ pub fn check_var<'a>(var: (&'a str, &'a str), registered: &mut RegisteredList<'a
 
     if var.0.is_empty()
     {
-        write!(&mut error_msg, "{}{}", initial_msg, "The variable name is empty.").ok();
-        registered.error_list.push(error_msg.clone());
+        registered.error_list.push(format!("{}{}", initial_msg, "The variable name is empty."));
     }
 
     if var.1.is_empty()

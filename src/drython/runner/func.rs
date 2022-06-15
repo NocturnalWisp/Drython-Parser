@@ -1,22 +1,21 @@
 use crate::drython::types::ExpressionList;
-use crate::drython::types::Func;
 use crate::drython::types::RegisteredList;
 
 use super::var;
 
-pub fn check_func<'a>(func: &'a Func, registered: &mut RegisteredList<'a>) -> Result<(), String>
-{
-    if !func.name.chars().all(|x| x.is_alphanumeric())
-    {
-        return Err("The function's name cannot have special characters.".to_string());
-    }
+// pub fn check_func<'a>(func: &'a Func, registered: &mut RegisteredList<'a>) -> Result<(), String>
+// {
+//     if !func.name.chars().all(|x| x.is_alphanumeric())
+//     {
+//         return Err("The function's name cannot have special characters.".to_string());
+//     }
 
-    registered.func_list.push(&func.name);
+//     registered.func_list.push(&func.name);
 
-    check_expression(&func.expressions, func.size, registered);
+//     check_expression(&func.expressions, func.size, registered);
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 fn check_expression<'a>(
     expressions: &'a ExpressionList,
