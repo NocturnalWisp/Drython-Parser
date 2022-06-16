@@ -1,5 +1,17 @@
 use std::vec;
 
+macro_rules! skip_fail_result
+{
+    ($res:expr) => {
+        match $res {
+            Some(val) => val,
+            None => {
+                continue;
+            }
+        }
+    };
+}
+
 // Inserts line numbers at the beginning of each line. Uses .lines() (seperated by \n)
 pub fn insert_line_numbers(string: String) -> Vec<String>
 {
@@ -139,7 +151,22 @@ pub fn ordered_strings_check<'a>(string: &'a str, strings: &[&str], split: bool)
 }
 
 pub const operations: [char; 6] = ['^', '/', '*', '%', '+', '-'];
-pub const operation_order: [&str; 3] = ["^", "*/%", "+-"];
+
+pub fn operator_a_gt_b(a: char, b: char) -> bool
+{
+    return get_operator_worth(a) > get_operator_worth(b)
+}
+
+fn get_operator_worth(c: char) -> u8
+{
+    match c
+    {
+        '+'|'-' => 0,
+        '*'|'/'|'%' => 1,
+        '^' => 2,
+        _ => 0
+    }
+}
 
 // The following are quick calls for finding certain items within strings
 pub fn check_for_scope(string: &str) -> bool

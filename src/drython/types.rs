@@ -1,5 +1,18 @@
+use std::collections::VecDeque;
 use std::{collections::HashMap};
 use std::any::Any;
+
+macro_rules! skip_fail_operator
+{
+    ($res:expr) => {
+        match $res {
+            Token::Operator(val) => val,
+            _ => {
+                continue;
+            }
+        }
+    };
+}
 
 #[derive(Debug)]
 pub struct ExpressionList
@@ -34,14 +47,13 @@ pub enum Token<'a>
     Bool(bool),
     Var(&'a str),
     Call(&'a str, &'a str),
-    Operation(Box<Operation<'a>>)
+    Operation(VecDeque<Token<'a>>),
+    Operator(char)
 }
 
 #[derive(Debug)]
 pub struct Operation<'a>
 {
-    pub op: char,
-    pub next_op: Option<char>,
     pub a: Token<'a>,
     pub b: Token<'a>,
 }

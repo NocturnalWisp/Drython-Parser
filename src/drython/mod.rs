@@ -1,5 +1,8 @@
+#[macro_use]
 #[path="./types.rs"]
 pub mod types;
+
+#[macro_use]
 #[path="./utility.rs"]
 pub mod utility;
 
