@@ -28,12 +28,11 @@ pub fn ordered_chars_check<'a>(string: &'a str, chars: &[u8], split: bool) -> Ch
 
     let string_chars = string.as_bytes();
 
-    let mut i = 0;
     let mut after_last_found = 0;
 
     let mut split_result: Vec<&str> = vec![];
 
-    while i < string_chars.len()
+    for i in 0..string_chars.len()
     {
         if string_chars[i] == chars[char_index]
         {
@@ -53,8 +52,6 @@ pub fn ordered_chars_check<'a>(string: &'a str, chars: &[u8], split: bool) -> Ch
                 break;
             }
         }
-
-        i += 1;
     }
 
     if split { if char_index >= chars.len() {
@@ -140,6 +137,9 @@ pub fn ordered_strings_check<'a>(string: &'a str, strings: &[&str], split: bool)
     // Just return bool.
     CheckOption::Bool(string_index >= strings.len())
 }
+
+pub const operations: [char; 6] = ['^', '/', '*', '%', '+', '-'];
+pub const operation_order: [&str; 3] = ["^", "*/%", "+-"];
 
 // The following are quick calls for finding certain items within strings
 pub fn check_for_scope(string: &str) -> bool

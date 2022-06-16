@@ -1,4 +1,5 @@
 use std::{collections::HashMap};
+use std::any::Any;
 
 #[derive(Debug)]
 pub struct ExpressionList
@@ -23,6 +24,26 @@ impl ExpressionList
             internal_expressions: HashMap::new()
         }
     }
+}
+
+#[derive(Debug)]
+pub enum Token<'a>
+{
+    Int(i32),
+    Float(f32),
+    Bool(bool),
+    Var(&'a str),
+    Call(&'a str, &'a str),
+    Operation(Box<Operation<'a>>)
+}
+
+#[derive(Debug)]
+pub struct Operation<'a>
+{
+    pub op: char,
+    pub next_op: Option<char>,
+    pub a: Token<'a>,
+    pub b: Token<'a>,
 }
 
 #[derive(Debug)]

@@ -2,6 +2,7 @@
 use std::fmt::Write;
 
 use crate::drython::types::RegisteredList;
+use crate::drython::utility::operations;
 
 pub fn check_var<'a>(var: (&'a str, &'a str), registered: &mut RegisteredList<'a>)
 {
@@ -26,10 +27,8 @@ pub fn check_var<'a>(var: (&'a str, &'a str), registered: &mut RegisteredList<'a
         registered.error_list.push(error_msg.clone());
     }
 
-    let special_chars = ['+', '-', '*', '/', '%', '|', '&', '^'];
-
     if !var.1.chars().all(|x| x.is_alphanumeric() 
-        || special_chars.contains(&x))
+        || operations.contains(&x))
     {
         write!(&mut error_msg, "{}{}", initial_msg, "The variable value contains special characters.").ok();
         registered.error_list.push(error_msg.clone());
