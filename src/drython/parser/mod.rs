@@ -1,6 +1,6 @@
 mod expression_parser;
 mod variable_parser;
-mod operation_parser;
+pub mod operation_parser;
 
 use linked_hash_map::LinkedHashMap;
 use std::fs;

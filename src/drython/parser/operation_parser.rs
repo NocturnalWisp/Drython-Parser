@@ -1,6 +1,6 @@
 use std::{error, option, collections::VecDeque};
 
-use crate::drython::{types::{Operation, Token}};
+use crate::drython::{types::Token};
 
 use crate::drython::utility;
 
@@ -42,12 +42,12 @@ pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -
                     // Function call.
                     if in_value
                     {
-                        tokens_ptr.push(Token::Call(&string[value_start..value_end], &string[parenth_start..i]));
+                        tokens_ptr.push(Token::Call(&string[value_start..value_end], &string[parenth_start..i-1]));
                     }
                     // Internal operation.
                     else
                     {
-                        tokens_ptr.push(Token::Operation(parse_operation(&string[parenth_start..i], error_list)));
+                        tokens_ptr.push(Token::Operation(parse_operation(&string[parenth_start..i-1], error_list)));
                     }
                 }
                 else
