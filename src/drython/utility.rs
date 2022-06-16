@@ -150,14 +150,9 @@ pub fn ordered_strings_check<'a>(string: &'a str, strings: &[&str], split: bool)
     CheckOption::Bool(string_index >= strings.len())
 }
 
-pub const operations: [char; 6] = ['^', '/', '*', '%', '+', '-'];
+pub const OPERATIONS: [char; 6] = ['^', '/', '*', '%', '+', '-'];
 
-pub fn operator_a_gt_b(a: char, b: char) -> bool
-{
-    return get_operator_worth(a) > get_operator_worth(b)
-}
-
-fn get_operator_worth(c: char) -> u8
+pub fn get_operator_worth(c: char) -> u8
 {
     match c
     {

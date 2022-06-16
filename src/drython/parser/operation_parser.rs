@@ -1,9 +1,11 @@
-use std::{error, option, collections::VecDeque};
+use std::{collections::VecDeque};
 
-use crate::drython::{types::Token};
+use crate::drython::types::Token;
 
 use crate::drython::utility;
 
+// Hybrid polish notation/ast tree. Internal operations (Expressed in parenthesis)
+// are put into a recursive calculation.
 pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -> VecDeque<Token<'a>>
 {
     let mut in_parenth = false;
@@ -17,7 +19,7 @@ pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -
 
     // optional char is for the char operation leading to the next option.
     let mut tokens: Vec<Token<'a>> = vec![];
-    let mut tokens_ptr = &mut tokens;
+    let tokens_ptr = &mut tokens;
 
     let mut just_found_operation = false;
 
@@ -42,13 +44,17 @@ pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -
                     // Function call.
                     if in_value
                     {
-                        tokens_ptr.push(Token::Call(&string[value_start..value_end], &string[parenth_start..i-1]));
+                        tokens_ptr.push(Token::Call(&string[value_start..value_end], &string[parenth_start..i]));
+                        in_value = false;
                     }
                     // Internal operation.
                     else
                     {
-                        tokens_ptr.push(Token::Operation(parse_operation(&string[parenth_start..i-1], error_list)));
+                        tokens_ptr.push(Token::Operation(parse_operation(&string[parenth_start..i], error_list)));
                     }
+
+                    // In case there is an operation just after this inner parenthesis.
+                    just_found_operation = true;
                 }
                 else
                 {
@@ -79,28 +85,30 @@ pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -
                     in_value = true;
                     value_start = i;
                 }
-                // Check for end of value.
-                else
-                {
-                    if in_value && i == string.len()-1
-                    {
-                        parse_op_value(&string[value_start..i-1], tokens_ptr);
-                    }
-                }
                 just_found_operation = true;
+
+                // This might be the last value.
+                if i == string.len()-1
+                {
+                    parse_op_value(&string[value_start..i+1], tokens_ptr);
+                    in_value = false;
+                }
             }
             // Handle operation value parsing.
-            else if utility::operations.contains(&c)
+            else if utility::OPERATIONS.contains(&c)
             {
                 // Handle previous value grabbing
-                let value = &string[value_start..i-1];
-
-                parse_op_value(value, tokens_ptr);
+                if in_value
+                {
+                    parse_op_value(&string[value_start..i], tokens_ptr);
+                    in_value = false;
+                }
 
                 // Handle operation.
                 if just_found_operation
                 {
                     tokens_ptr.push(Token::Operator(c));
+                    just_found_operation = false;
                 }
                 else
                 {
@@ -121,6 +129,7 @@ pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -
     
 }
 
+// Allows for the conversion from string to different types.
 fn parse_op_value<'a>(value: &'a str, options: &mut Vec<Token<'a>>)
 {
     if let Ok(result) = value.parse::<i32>()
@@ -135,6 +144,7 @@ fn parse_op_value<'a>(value: &'a str, options: &mut Vec<Token<'a>>)
     {
         options.push(Token::Bool(result));
     }
+    // Parsed tokens that don't fit another type are considered variables.
     else
     {
         options.push(Token::Var(value));
@@ -156,18 +166,12 @@ fn handle_populating_operation<'a>(tokens: Vec<Token<'a>>) -> VecDeque<Token<'a>
         {
             Token::Operator(op) => 
             {
-                let mut stack_last = skip_fail_result!(stack.last());
-                let mut stack_op = *skip_fail_operator!(stack_last);
-
-                while utility::operator_a_gt_b(stack_op, op)
+                while operator_a_gt_b(stack.last(), op)
                 {
                     if let Some(result) = stack.pop()
                     {
                         queue.push_back(result);
                     }
-                    
-                    stack_last = skip_fail_result!(stack.last());
-                    stack_op = *skip_fail_operator!(stack_last);
                 }
                 stack.push(token);
             },
@@ -187,4 +191,23 @@ fn handle_populating_operation<'a>(tokens: Vec<Token<'a>>) -> VecDeque<Token<'a>
     }
     
     queue
+}
+
+pub fn operator_a_gt_b(a: Option<&Token>, b: char) -> bool
+{
+    if let Some(token) = a
+    {
+        if let Token::Operator(c) = token
+        {
+            return utility::get_operator_worth(*c) > utility::get_operator_worth(b)
+        }
+        else
+        {
+            return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
 }
