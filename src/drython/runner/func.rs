@@ -27,8 +27,8 @@ fn check_expression<'a>(
         // Check variable.
         if expressions.variables.contains_key(&index)
         {
-            //let var = &expressions.variables[&index];
-            //var::check_var((&var.0.as_str(), &var.1.as_str()), registered);
+            let var = &expressions.variables[&index];
+            var::check_var((&var.0.as_str(), &var.1.as_str()), registered);
         }
     }
 }

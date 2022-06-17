@@ -1,18 +1,18 @@
-use std::collections::{HashMap, VecDeque};
-use linked_hash_map::LinkedHashMap;
+#[path="scope_parser.rs"]
+mod scope_parser;
 
-use crate::drython::types::Token;
+use std::collections::HashMap;
+use linked_hash_map::LinkedHashMap;
 
 use super::utility;
 use super::types::ExpressionList;
 use super::variable_parser::parse_var;
 use scope_parser::parse_scope;
 
-// Parses various types of expressions (if, return, function, variable assignment)
-pub fn parse_expressions<'a>(expressions: &'a Vec<String>, line_start:usize, warning_list:&mut LinkedHashMap<usize, String>) -> ExpressionList<'a>
+pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_list:&mut LinkedHashMap<usize, String>) -> ExpressionList
 {
-    let mut vars: HashMap<usize, (String, VecDeque<Token<'a>>)> = HashMap::new();
-    let mut calls: HashMap<usize, (String, VecDeque<Token<'a>>)> = HashMap::new();
+    let mut vars: HashMap<usize, (String, String)> = HashMap::new();
+    let mut calls: HashMap<usize, (String, Vec<String>)> = HashMap::new();
     let mut internal_expressions: HashMap<usize, ExpressionList> = HashMap::new();
 
     // For internal expressions lists.
@@ -86,7 +86,7 @@ pub fn parse_expressions<'a>(expressions: &'a Vec<String>, line_start:usize, war
                 {
                     Ok(result) => 
                     {
-                        calls.insert(operation_index, ("return".to_string(), result));
+                        calls.insert(operation_index, ("return".to_string(), vec![result.to_string()]));
                         operation_index += 1;
                     }
                     Err(error) => {warning_list.insert(line_start+i, error);}
@@ -132,7 +132,7 @@ pub fn parse_expressions<'a>(expressions: &'a Vec<String>, line_start:usize, war
 }
 
 // Parses a function call into the name of the function, and the arguments.
-fn parse_call<'a>(call: &'a str) -> Result<(String, VecDeque<Token<'a>>), String>
+fn parse_call(call: &str) -> Result<(String, Vec<String>), String>
 {
     let function: String;
     let arguments: Vec<String>;
@@ -158,7 +158,7 @@ fn parse_call<'a>(call: &'a str) -> Result<(String, VecDeque<Token<'a>>), String
     Ok((function, arguments))
 }
 
-fn parse_return<'a>(statement: &'a str) -> Result<&str, VecDeque<Token<'a>>>
+fn parse_return(statement: &str) -> Result<&str, String>
 {
     let expression: &str;
     

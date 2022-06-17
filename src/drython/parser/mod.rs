@@ -1,11 +1,11 @@
-pub mod expression_parser;
-pub mod variable_parser;
+mod expression_parser;
+mod variable_parser;
 pub mod operation_parser;
 
 use linked_hash_map::LinkedHashMap;
 use std::fs;
 use std::fmt::Write;
-use expression_parser::parse_expressions;
+use crate::drython::parser::expression_parser::parse_expressions;
 
 use super::script_type::ScriptType;
 use super::types;
@@ -13,19 +13,19 @@ use super::types::ExpressionList;
 use super::utility;
 
 #[derive(Debug)]
-pub struct Parser<'a>
+pub struct Parser
 {
     pub script_type: ScriptType,
-    pub global_expressions: ExpressionList<'a>
+    pub global_expressions: ExpressionList
 }
 
-impl<'a> Parser<'a>
+impl Parser
 {
     // Main parse function.
     pub fn parse_file(
         file_path: &str,
         warning_list: &mut LinkedHashMap<usize, String>
-    ) -> Result<Parser<'a>, String>
+    ) -> Result<Parser, String>
     {
         let contents: String = match fs::read_to_string(&file_path)
         {

@@ -14,18 +14,18 @@ macro_rules! skip_fail_operator
 }
 
 #[derive(Debug)]
-pub struct ExpressionList<'a>
+pub struct ExpressionList
 {
     pub scope_info: (Option<String>, Option<String>),
     pub size: usize,
-    pub variables: HashMap<usize, (String, VecDeque<Token<'a>>)>,
-    pub calls: HashMap<usize, (String, VecDeque<Token<'a>>)>,
-    pub internal_expressions: HashMap<usize, ExpressionList<'a>>,
+    pub variables: HashMap<usize, (String, String)>,
+    pub calls: HashMap<usize, (String, Vec<String>)>,
+    pub internal_expressions: HashMap<usize, ExpressionList>,
 }
 
-impl<'a> ExpressionList<'a>
+impl ExpressionList
 {
-    pub fn new() -> ExpressionList<'a>
+    pub fn new() -> ExpressionList
     {
         ExpressionList
         {
