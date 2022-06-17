@@ -11,8 +11,8 @@ use scope_parser::parse_scope;
 
 pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_list:&mut LinkedHashMap<usize, String>) -> ExpressionList
 {
-    let mut vars: HashMap<usize, (String, String)> = HashMap::new();
-    let mut calls: HashMap<usize, (String, Vec<String>)> = HashMap::new();
+    let mut single_op: HashMap<usize, (String, String)> = HashMap::new();
+    let mut multi_ops: HashMap<usize, (String, Vec<String>)> = HashMap::new();
     let mut internal_expressions: HashMap<usize, ExpressionList> = HashMap::new();
 
     // For internal expressions lists.
@@ -86,7 +86,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                 {
                     Ok(result) => 
                     {
-                        calls.insert(operation_index, ("return".to_string(), vec![result.to_string()]));
+                        multi_ops.insert(operation_index, ("return".to_string(), vec![result.to_string()]));
                         operation_index += 1;
                     }
                     Err(error) => {warning_list.insert(line_start+i, error);}
@@ -99,7 +99,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                 {
                     Ok(result) => 
                     {
-                        calls.insert(operation_index, (result.0, result.1));
+                        multi_ops.insert(operation_index, (result.0, result.1));
                         operation_index += 1;
                     },
                     Err(error) => {warning_list.insert(line_start+i, error);}
@@ -112,7 +112,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                 {
                     Ok(result) => 
                     {
-                        vars.insert(operation_index, (result.0, result.1));
+                        single_op.insert(operation_index, (result.0, result.1));
                         operation_index += 1;
                     },
                     Err(error) => {warning_list.insert(line_start+i, error);}
@@ -125,8 +125,8 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
     {
         scope_info: (None, None),
         size: operation_index,
-        variables: vars,
-        calls,
+        single_op,
+        multi_ops,
         internal_expressions,
     }
 }

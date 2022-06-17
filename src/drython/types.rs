@@ -18,8 +18,8 @@ pub struct ExpressionList
 {
     pub scope_info: (Option<String>, Option<String>),
     pub size: usize,
-    pub variables: HashMap<usize, (String, String)>,
-    pub calls: HashMap<usize, (String, Vec<String>)>,
+    pub single_op: HashMap<usize, (String, String)>,
+    pub multi_ops: HashMap<usize, (String, Vec<String>)>,
     pub internal_expressions: HashMap<usize, ExpressionList>,
 }
 
@@ -31,8 +31,8 @@ impl ExpressionList
         {
             scope_info: (None, None),
             size: 0,
-            variables: HashMap::new(),
-            calls: HashMap::new(),
+            single_op: HashMap::new(),
+            multi_ops: HashMap::new(),
             internal_expressions: HashMap::new()
         }
     }

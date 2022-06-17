@@ -25,10 +25,10 @@ fn check_expression<'a>(
     for index in 0..expression_size
     {
         // Check variable.
-        if expressions.variables.contains_key(&index)
-        {
-            let var = &expressions.variables[&index];
-            var::check_var((&var.0.as_str(), &var.1.as_str()), registered);
-        }
+        // if expressions.variables.contains_key(&index)
+        // {
+        //     let var = &expressions.variables[&index];
+        //     var::check_var((&var.0.as_str(), &var.1.as_str()), registered);
+        // }
     }
 }
