@@ -150,15 +150,27 @@ pub fn ordered_strings_check<'a>(string: &'a str, strings: &[&str], split: bool)
     CheckOption::Bool(string_index >= strings.len())
 }
 
-pub const OPERATIONS: [char; 6] = ['^', '/', '*', '%', '+', '-'];
+pub const OPERATIONS: [&str; 10] = [
+    "^", "/", "*", "%", "+", "-",
+    "&&", "||", "&", "|",
+];
 
-pub fn get_operator_worth(c: char) -> u8
+/// Determines whether the passed char can be found within the allowed operations array.
+/// Short-circuiting function.
+pub fn operations_contains(c: char) -> bool
 {
-    match c
+    return OPERATIONS.iter().any(|x| x.contains(c));
+}
+
+pub fn get_operator_worth(string: &str) -> u8
+{
+    match string
     {
-        '+'|'-' => 0,
-        '*'|'/'|'%' => 1,
-        '^' => 2,
+        "+"|"-" => 0,
+        "*"|"/"|"%" => 1,
+        "^" => 2,
+        "||"|"&" => 3,
+        "&&"|"|" => 4,
         _ => 0
     }
 }

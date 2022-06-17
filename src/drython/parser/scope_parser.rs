@@ -27,7 +27,6 @@ pub fn parse_scope(expression: &str) -> Result<(Option<String>, Option<String>),
     if let CheckOption::Split(result) = 
         utility::ordered_chars_check(exp, &[b'(', b')', b':'], true)
     {
-        println!("{:?}", result);
         return handle_scope_result(&result);
     }
 

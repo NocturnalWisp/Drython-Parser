@@ -4,124 +4,173 @@ use crate::drython::types::Token;
 
 use crate::drython::utility;
 
-// Hybrid polish notation/ast tree. Internal operations (Expressed in parenthesis)
+// Used internally for parsing tokens from an operation.
+// (Without the values associated with Types::Token)
+#[derive(PartialEq, Clone)]
+enum ParseTokenType
+{
+    None,
+    Value,
+    Operator,
+    Parenth,
+    //Function Call
+    Call
+}
+
+// Hybrid polish notation/ast tree. Internal operations (Expressed in parentheses)
 // are put into a recursive calculation.
 pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -> VecDeque<Token<'a>>
 {
-    let mut in_parenth = false;
+    let mut last_token_type = ParseTokenType::None;
+    let mut token_start: usize = 0;
+    let mut token_end: usize = 0;
     
-    let mut parenth_start: usize = 0;
-    let mut inner_parenth_count: usize = 0;
-
-    let mut in_value = false;
-    let mut value_start: usize = 0;
-    let mut value_end: usize = 0;
+    let mut inner_parenth_count: i8 = 0;
 
     // optional char is for the char operation leading to the next option.
     let mut tokens: Vec<Token<'a>> = vec![];
     let tokens_ptr = &mut tokens;
 
-    let mut just_found_operation = false;
-
-    // Resurive check for parenthesis
+    // Resurive check for parentheses
     for (i, c) in string.chars().enumerate()
     {
-        if in_parenth
+        let current_char_type =
         {
-            if c == '('
+            if c.is_alphanumeric() || c == '.' { ParseTokenType::Value }
+            else if utility::operations_contains(c) { ParseTokenType::Operator }
+            else if c == '(' || c == ')' { ParseTokenType::Parenth }
+            else { ParseTokenType::None }
+        };
+
+        if last_token_type != ParseTokenType::None
+        {
+            // Continue to punt token_end until we've found a different type of token.
+            if (current_char_type == last_token_type ||
+                last_token_type == ParseTokenType::Parenth || last_token_type == ParseTokenType::Call)
+                    && current_char_type != ParseTokenType::Parenth && i != string.len()-1
             {
-                inner_parenth_count += 1;
+                token_end = i+1;
+                continue;
             }
+            // The following else ifs' handle the last token value base on what kind of change happened.
 
-            if c == ')'
+            // Finish off value.
+            if last_token_type == ParseTokenType::Value && current_char_type != ParseTokenType::Value
             {
-                // Closing operation/function call.
-                if inner_parenth_count == 0
+                // If current is parenth, it's the start of a call.
+                if current_char_type == ParseTokenType::Parenth
                 {
-                    in_parenth = false;
-                    inner_parenth_count = 0;
+                    // Start call but don't reset token_start.
+                    last_token_type = ParseTokenType::Call;
+                }
+                // Otherwise it's just a value.
+                else
+                {
+                    tokens_ptr.push(parse_token_value(&string[token_start..token_end]));
 
-                    // Function call.
-                    if in_value
-                    {
-                        tokens_ptr.push(Token::Call(&string[value_start..value_end], &string[parenth_start..i]));
-                        in_value = false;
-                    }
-                    // Internal operation.
-                    else
-                    {
-                        tokens_ptr.push(Token::Operation(parse_operation(&string[parenth_start..i], error_list)));
-                    }
-
-                    // In case there is an operation just after this inner parenthesis.
-                    just_found_operation = true;
+                    last_token_type = ParseTokenType::None;
+                }
+            }
+            // Finish off operator.
+            else if last_token_type == ParseTokenType::Operator && current_char_type != ParseTokenType::Operator
+            {
+                let found_operator = &string[token_start..token_end];
+                if utility::OPERATIONS.iter().any(|x| x == &found_operator)
+                {
+                    tokens_ptr.push(Token::Operator(found_operator));
                 }
                 else
                 {
-                    inner_parenth_count -= 1;
+                    //TODO: Throw error that the operator doesn't exist.
+                }
+
+                last_token_type = ParseTokenType::None;
+            }
+            // Handle an internal operation using recursion on the current function.
+            else if last_token_type == ParseTokenType::Parenth
+            {
+                // Found an inner-inner operation.
+                if c == '('
+                {
+                    inner_parenth_count += 1;
+                }
+                else if c == ')'
+                {
+                    if inner_parenth_count == 0
+                    {
+                        tokens_ptr.push(Token::Operation(parse_operation(&string[token_start..token_end], error_list)));
+
+                        last_token_type = ParseTokenType::None;
+                    }
+                    else
+                    {
+                        inner_parenth_count -= 1;
+                    }
+                }
+            }
+            else if last_token_type == ParseTokenType::Call
+            {
+                // Found an inner-call operation.
+                if c == '('
+                {
+                    inner_parenth_count += 1;
+                }
+                else if c == ')'
+                {
+                    if inner_parenth_count == 0
+                    {
+                        // Split call into function and arguments.
+                        let call = &string[token_start..i];
+
+                        if let Some(result) = call.split_once("(")
+                        {
+                            tokens_ptr.push(Token::Call(result.0, &result.1[..result.1.len()]));
+                        }
+
+                        last_token_type = ParseTokenType::None;
+                    }
+                    else
+                    {
+                        inner_parenth_count -= 1;
+                    }
                 }
             }
         }
-        else
-        {
-            // Handle parenthises operation parsing.
-            if c == '('
-            {
-                in_parenth = true;
-                parenth_start = i+1;
 
-                // If was in value and didn't find operation, this is likely a function call.
-                if in_value
-                {
-                    value_end = i;
-                }
-                just_found_operation = false;
-            }
-            // Handle value parsing.
-            else if c.is_alphanumeric()
+        if last_token_type == ParseTokenType::None || i == string.len()-1
+        {
+            if current_char_type == ParseTokenType::Value
             {
-                if !in_value
-                {
-                    in_value = true;
-                    value_start = i;
-                }
-                just_found_operation = true;
+                last_token_type = ParseTokenType::Value;
 
                 // This might be the last value.
                 if i == string.len()-1
                 {
-                    parse_op_value(&string[value_start..i+1], tokens_ptr);
-                    in_value = false;
-                }
-            }
-            // Handle operation value parsing.
-            else if utility::OPERATIONS.contains(&c)
-            {
-                // Handle previous value grabbing
-                if in_value
-                {
-                    parse_op_value(&string[value_start..i], tokens_ptr);
-                    in_value = false;
+                    tokens_ptr.push(parse_token_value(&string[token_start+1..i+1]));
                 }
 
-                // Handle operation.
-                if just_found_operation
-                {
-                    tokens_ptr.push(Token::Operator(c));
-                    just_found_operation = false;
-                }
-                else
-                {
-                    error_list.push("Operation parse error.\nPlease have a left and right side to the operation.");
-                }
+                token_start = i;
+                token_end = i+1;
+            }
+            else if current_char_type == ParseTokenType::Operator
+            {
+                last_token_type = ParseTokenType::Operator;
+                token_start = i;
+                token_end = i+1;
+            }
+            else if c == '('
+            {
+                last_token_type = ParseTokenType::Parenth;
+                token_start = i+1;
+                token_end = i+2;
             }
         }
     }
 
     // If still in parenthises, there is an error.
-    if in_parenth
+    if inner_parenth_count > 0
     {
-        error_list.push("Failed to parse operation.\nClosing brace not found.");
+        error_list.push("Failed to parse operation.\nClosing parentheses not found.");
     }
     
     // Handle operation order and populating.
@@ -130,24 +179,24 @@ pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -
 }
 
 // Allows for the conversion from string to different types.
-fn parse_op_value<'a>(value: &'a str, options: &mut Vec<Token<'a>>)
+fn parse_token_value<'a>(value: &'a str) -> Token<'a>
 {
     if let Ok(result) = value.parse::<i32>()
     {
-        options.push(Token::Int(result));
+        Token::Int(result)
     }
     else if let Ok(result) = value.parse::<f32>()
     {
-        options.push(Token::Float(result));
+        Token::Float(result)
     }
     else if let Ok(result) = value.parse::<bool>()
     {
-        options.push(Token::Bool(result));
+        Token::Bool(result)
     }
     // Parsed tokens that don't fit another type are considered variables.
     else
     {
-        options.push(Token::Var(value));
+        Token::Var(value)
     }
 }
 
@@ -166,7 +215,7 @@ fn handle_populating_operation<'a>(tokens: Vec<Token<'a>>) -> VecDeque<Token<'a>
         {
             Token::Operator(op) => 
             {
-                while operator_a_gt_b(stack.last(), op)
+                while operator_a_gte_b(stack.last(), op)
                 {
                     if let Some(result) = stack.pop()
                     {
@@ -193,13 +242,16 @@ fn handle_populating_operation<'a>(tokens: Vec<Token<'a>>) -> VecDeque<Token<'a>
     queue
 }
 
-pub fn operator_a_gt_b(a: Option<&Token>, b: char) -> bool
+// Check if operator worth is greater than or equal to another.
+// Equal to allows for processing left most operators first that share the same value as another.
+// (Eg. x*2/7: x*2 should go first, than divide that by 7.)
+pub fn operator_a_gte_b<'a>(a: Option<&'a Token>, b: &'a str) -> bool
 {
     if let Some(token) = a
     {
-        if let Token::Operator(c) = token
+        if let Token::Operator(str) = token
         {
-            return utility::get_operator_worth(*c) > utility::get_operator_worth(b)
+            return utility::get_operator_worth(*str) >= utility::get_operator_worth(b)
         }
         else
         {

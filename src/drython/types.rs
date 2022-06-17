@@ -47,7 +47,7 @@ pub enum Token<'a>
     Var(&'a str),
     Call(&'a str, &'a str),
     Operation(VecDeque<Token<'a>>),
-    Operator(char)
+    Operator(&'a str)
 }
 
 #[derive(Debug)]
