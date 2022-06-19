@@ -1,14 +1,11 @@
 pub mod drython;
 
 use std::io::stdin;
-use drython::parser::{Parser, self};
+use drython::types::Parser;
 use linked_hash_map::LinkedHashMap;
 
 fn main()
 {
-    // let mut error_list: Vec<&str> = vec![];
-    // println!("{:#?}", parser::operation_parser::parse_operation("x-chsns(pen)*3.1/(8/2)+banana", &mut error_list));
-
     loop
     {
         let mut input = String::new();

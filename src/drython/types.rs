@@ -1,11 +1,13 @@
 use std::collections::VecDeque;
 use std::{collections::HashMap};
 
+use super::script_type::ScriptType;
+
 macro_rules! skip_fail_operator
 {
     ($res:expr) => {
         match $res {
-            Token::Operator(val) => val,
+            Some(val) => val,
             _ => {
                 continue;
             }
@@ -14,12 +16,19 @@ macro_rules! skip_fail_operator
 }
 
 #[derive(Debug)]
+pub struct Parser
+{
+    pub script_type: ScriptType,
+    pub global_expressions: ExpressionList
+}
+
+#[derive(Debug)]
 pub struct ExpressionList
 {
     pub scope_info: (Option<String>, Option<String>),
     pub size: usize,
-    pub single_op: HashMap<usize, (String, String)>,
-    pub multi_ops: HashMap<usize, (String, Vec<String>)>,
+    pub single_op: HashMap<usize, (String, Vec<Token>)>,
+    pub multi_ops: HashMap<usize, (String, Vec<Vec<Token>>)>,
     pub internal_expressions: HashMap<usize, ExpressionList>,
 }
 
@@ -38,23 +47,23 @@ impl ExpressionList
     }
 }
 
-#[derive(Debug)]
-pub enum Token<'a>
+#[derive(Debug, Clone)]
+pub enum Token
 {
     Int(i32),
     Float(f32),
     Bool(bool),
-    Var(&'a str),
-    Call(&'a str, &'a str),
-    Operation(VecDeque<Token<'a>>),
-    Operator(&'a str)
+    Var(String),
+    Call(String, String),
+    Operation(Vec<Token>),
+    Operator(String)
 }
 
 #[derive(Debug)]
-pub struct Operation<'a>
+pub struct Operation
 {
-    pub a: Token<'a>,
-    pub b: Token<'a>,
+    pub a: Token,
+    pub b: Token,
 }
 
 #[derive(Debug)]

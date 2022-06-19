@@ -1,4 +1,8 @@
+use std::arch::x86_64::_mm_movedup_pd;
+use std::clone;
 use std::{collections::VecDeque};
+
+use linked_hash_map::LinkedHashMap;
 
 use crate::drython::types::Token;
 
@@ -19,7 +23,7 @@ enum ParseTokenType
 
 // Hybrid polish notation/ast tree. Internal operations (Expressed in parentheses)
 // are put into a recursive calculation.
-pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -> VecDeque<Token<'a>>
+pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize, String>) -> Vec<Token>
 {
     let mut last_token_type = ParseTokenType::None;
     let mut token_start: usize = 0;
@@ -28,7 +32,7 @@ pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -
     let mut inner_parenth_count: i8 = 0;
 
     // optional char is for the char operation leading to the next option.
-    let mut tokens: Vec<Token<'a>> = vec![];
+    let mut tokens: Vec<Token> = Vec::new();
     let tokens_ptr = &mut tokens;
 
     // Resurive check for parentheses
@@ -69,6 +73,7 @@ pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -
                     tokens_ptr.push(parse_token_value(&string[token_start..token_end]));
 
                     last_token_type = ParseTokenType::None;
+                    token_start = i;
                 }
             }
             // Finish off operator.
@@ -77,7 +82,7 @@ pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -
                 let found_operator = &string[token_start..token_end];
                 if utility::OPERATIONS.iter().any(|x| x == &found_operator)
                 {
-                    tokens_ptr.push(Token::Operator(found_operator));
+                    tokens_ptr.push(Token::Operator(found_operator.to_string()));
                 }
                 else
                 {
@@ -85,6 +90,7 @@ pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -
                 }
 
                 last_token_type = ParseTokenType::None;
+                token_start = i;
             }
             // Handle an internal operation using recursion on the current function.
             else if last_token_type == ParseTokenType::Parenth
@@ -98,9 +104,10 @@ pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -
                 {
                     if inner_parenth_count == 0
                     {
-                        tokens_ptr.push(Token::Operation(parse_operation(&string[token_start..token_end], error_list)));
+                        tokens_ptr.push(Token::Operation(parse_operation(&string[token_start..token_end], warning_list)));
 
                         last_token_type = ParseTokenType::None;
+                        token_start = i;
                     }
                     else
                     {
@@ -124,10 +131,11 @@ pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -
 
                         if let Some(result) = call.split_once("(")
                         {
-                            tokens_ptr.push(Token::Call(result.0, &result.1[..result.1.len()]));
+                            tokens_ptr.push(Token::Call(result.0.to_string(), result.1[..result.1.len()].to_string()));
                         }
 
                         last_token_type = ParseTokenType::None;
+                        token_start = i;
                     }
                     else
                     {
@@ -146,7 +154,7 @@ pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -
                 // This might be the last value.
                 if i == string.len()-1
                 {
-                    tokens_ptr.push(parse_token_value(&string[token_start+1..i+1]));
+                    tokens_ptr.push(parse_token_value(&string[token_start..i+1]));
                 }
 
                 token_start = i;
@@ -170,7 +178,7 @@ pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -
     // If still in parenthises, there is an error.
     if inner_parenth_count > 0
     {
-        error_list.push("Failed to parse operation.\nClosing parentheses not found.");
+        //TODO: warning_list.push("Failed to parse operation.\nClosing parentheses not found.");
     }
     
     // Handle operation order and populating.
@@ -179,7 +187,7 @@ pub fn parse_operation<'a, 'b>(string: &'a str, error_list: &mut Vec<&'b str>) -
 }
 
 // Allows for the conversion from string to different types.
-fn parse_token_value<'a>(value: &'a str) -> Token<'a>
+fn parse_token_value<'a>(value: &'a str) -> Token
 {
     if let Ok(result) = value.parse::<i32>()
     {
@@ -196,41 +204,53 @@ fn parse_token_value<'a>(value: &'a str) -> Token<'a>
     // Parsed tokens that don't fit another type are considered variables.
     else
     {
-        Token::Var(value)
+        Token::Var(value.to_string())
     }
+}
+
+macro_rules! handle_token_operation
+{
+    ($res:expr) => {
+        match $res {
+            Token::Operator(val) => val,
+            _ => {
+                continue;
+            }
+        }
+    };
 }
 
 // Handles creating the various types of operations to be merged into one big operation later.
 // Uses the shunting algorithm based on the reverse polish technique.
 // (Doesn't deal with brackets because Operations all ready nest themselves.)
 // Followed: https://brilliant.org/wiki/shunting-yard-algorithm/
-fn handle_populating_operation<'a>(tokens: Vec<Token<'a>>) -> VecDeque<Token<'a>>
+fn handle_populating_operation(mut tokens: Vec<Token>) -> Vec<Token>
 {
-    let mut stack: Vec<Token<'a>> = vec![];
-    let mut queue: VecDeque<Token<'a>> = VecDeque::new();
+    let mut stack: Vec<&Token> = Vec::new();
+    let mut queue: VecDeque<&Token> = VecDeque::new();
 
-    for token in tokens
+    let mut final_tokens: Vec<Token> = Vec::new();
+
+    for token in tokens.iter().rev()
     {
-        match token
+        if let Token::Operator(op) = token
         {
-            Token::Operator(op) => 
+            while operator_a_gte_b(stack.last(), &op)
             {
-                while operator_a_gte_b(stack.last(), op)
+                if let Some(result) = stack.pop()
                 {
-                    if let Some(result) = stack.pop()
-                    {
-                        queue.push_back(result);
-                    }
+                    queue.push_back(result);
                 }
-                stack.push(token);
-            },
-            _ =>
-            {
-                queue.push_back(token);
             }
+            stack.push(token);
+        }
+        else
+        {
+            queue.push_back(token);
         }
     }
 
+    // Put everything left from the stack onto the queue.
     while !stack.is_empty()
     {
         if let Some(result) = stack.pop()
@@ -239,19 +259,28 @@ fn handle_populating_operation<'a>(tokens: Vec<Token<'a>>) -> VecDeque<Token<'a>
         }
     }
     
-    queue
+    // Finalize and move everything to the final tokens vector.
+    while !queue.is_empty()
+    {
+        if let Some(result) = queue.pop_front()
+        {
+            final_tokens.push(result.clone());
+        }
+    }
+    
+    final_tokens
 }
 
 // Check if operator worth is greater than or equal to another.
 // Equal to allows for processing left most operators first that share the same value as another.
 // (Eg. x*2/7: x*2 should go first, than divide that by 7.)
-pub fn operator_a_gte_b<'a>(a: Option<&'a Token>, b: &'a str) -> bool
+pub fn operator_a_gte_b(a: Option<&&Token>, b: &str) -> bool
 {
     if let Some(token) = a
     {
         if let Token::Operator(str) = token
         {
-            return utility::get_operator_worth(*str) >= utility::get_operator_worth(b)
+            return utility::get_operator_worth(str) >= utility::get_operator_worth(b)
         }
         else
         {

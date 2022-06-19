@@ -1,7 +1,7 @@
 mod var;
 mod func;
 
-use super::parser::Parser;
+use super::types::Parser;
 
 pub fn trial_run(parser: &Parser)
 {

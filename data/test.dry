@@ -1,3 +1,5 @@
 System
 
-variable = 200*5
+start(5&&2)
+    
+end

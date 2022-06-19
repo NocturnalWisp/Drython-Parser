@@ -1,18 +1,20 @@
 #[path="scope_parser.rs"]
 mod scope_parser;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use linked_hash_map::LinkedHashMap;
 
-use super::utility;
+use crate::drython::types::Token;
+
+use super::{utility, operation_parser};
 use super::types::ExpressionList;
 use super::variable_parser::parse_var;
 use scope_parser::parse_scope;
 
 pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_list:&mut LinkedHashMap<usize, String>) -> ExpressionList
 {
-    let mut single_op: HashMap<usize, (String, String)> = HashMap::new();
-    let mut multi_ops: HashMap<usize, (String, Vec<String>)> = HashMap::new();
+    let mut single_op: HashMap<usize, (String, Vec<Token>)> = HashMap::new();
+    let mut multi_ops: HashMap<usize, (String, Vec<Vec<Token>>)> = HashMap::new();
     let mut internal_expressions: HashMap<usize, ExpressionList> = HashMap::new();
 
     // For internal expressions lists.
@@ -84,24 +86,13 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
             {
                 match parse_return(exp)
                 {
-                    Ok(result) => 
+                    Ok(statement) => 
                     {
-                        multi_ops.insert(operation_index, ("return".to_string(), vec![result.to_string()]));
+                        let operation = operation_parser::parse_operation(statement, warning_list);
+
+                        multi_ops.insert(operation_index, ("return".to_string(), vec![operation]));
                         operation_index += 1;
                     }
-                    Err(error) => {warning_list.insert(line_start+i, error);}
-                }
-            }
-            // Function call.
-            else if utility::check_for_call(exp)
-            {
-                match parse_call(exp)
-                {
-                    Ok(result) => 
-                    {
-                        multi_ops.insert(operation_index, (result.0, result.1));
-                        operation_index += 1;
-                    },
                     Err(error) => {warning_list.insert(line_start+i, error);}
                 }
             }
@@ -112,7 +103,31 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                 {
                     Ok(result) => 
                     {
-                        single_op.insert(operation_index, (result.0, result.1));
+                        let operation = operation_parser::parse_operation(&result.1, warning_list);
+
+                        single_op.insert(operation_index, (result.0, operation));
+                        operation_index += 1;
+                    },
+                    Err(error) => {warning_list.insert(line_start+i, error);}
+                }
+            }
+            // Function call.
+            else if utility::check_for_call(exp)
+            {
+                match parse_call(exp)
+                {
+                    Ok(result) => 
+                    {
+                        let mut operations: Vec<Vec<Token>> = Vec::new();
+
+                        for statement in result.1
+                        {
+                            operations.push(operation_parser::parse_operation(&statement, warning_list));
+                        }
+
+                        operations.reverse();
+
+                        multi_ops.insert(operation_index, (result.0, operations));
                         operation_index += 1;
                     },
                     Err(error) => {warning_list.insert(line_start+i, error);}

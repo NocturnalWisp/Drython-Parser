@@ -15,7 +15,7 @@ macro_rules! skip_fail_result
 // Inserts line numbers at the beginning of each line. Uses .lines() (seperated by \n)
 pub fn insert_line_numbers(string: String) -> Vec<String>
 {
-    let mut new_strings: Vec<String> = vec![];
+    let mut new_strings: Vec<String> = Vec::new();
 
     for (index, line) in string.lines().enumerate()
     {
@@ -42,7 +42,7 @@ pub fn ordered_chars_check<'a>(string: &'a str, chars: &[u8], split: bool) -> Ch
 
     let mut after_last_found = 0;
 
-    let mut split_result: Vec<&str> = vec![];
+    let mut split_result: Vec<&str> = Vec::new();
 
     for i in 0..string_chars.len()
     {
@@ -86,7 +86,7 @@ pub fn ordered_strings_check<'a>(string: &'a str, strings: &[&str], split: bool)
     let mut i = 0;
     let mut after_last_found = 0;
 
-    let mut split_result: Vec<&str> = vec![];
+    let mut split_result: Vec<&str> = Vec::new();
 
     while i < string_chars.len()
     {
