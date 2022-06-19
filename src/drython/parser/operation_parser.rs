@@ -1,5 +1,3 @@
-use std::arch::x86_64::_mm_movedup_pd;
-use std::clone;
 use std::{collections::VecDeque};
 
 use linked_hash_map::LinkedHashMap;
@@ -208,30 +206,18 @@ fn parse_token_value<'a>(value: &'a str) -> Token
     }
 }
 
-macro_rules! handle_token_operation
-{
-    ($res:expr) => {
-        match $res {
-            Token::Operator(val) => val,
-            _ => {
-                continue;
-            }
-        }
-    };
-}
-
 // Handles creating the various types of operations to be merged into one big operation later.
 // Uses the shunting algorithm based on the reverse polish technique.
 // (Doesn't deal with brackets because Operations all ready nest themselves.)
 // Followed: https://brilliant.org/wiki/shunting-yard-algorithm/
-fn handle_populating_operation(mut tokens: Vec<Token>) -> Vec<Token>
+fn handle_populating_operation(tokens: Vec<Token>) -> Vec<Token>
 {
     let mut stack: Vec<&Token> = Vec::new();
     let mut queue: VecDeque<&Token> = VecDeque::new();
 
     let mut final_tokens: Vec<Token> = Vec::new();
 
-    for token in tokens.iter().rev()
+    for token in tokens.iter()
     {
         if let Token::Operator(op) = token
         {
@@ -262,7 +248,7 @@ fn handle_populating_operation(mut tokens: Vec<Token>) -> Vec<Token>
     // Finalize and move everything to the final tokens vector.
     while !queue.is_empty()
     {
-        if let Some(result) = queue.pop_front()
+        if let Some(result) = queue.pop_back()
         {
             final_tokens.push(result.clone());
         }

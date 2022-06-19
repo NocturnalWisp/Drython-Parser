@@ -1,7 +1,7 @@
 #[path="scope_parser.rs"]
 mod scope_parser;
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use linked_hash_map::LinkedHashMap;
 
 use crate::drython::types::Token;
