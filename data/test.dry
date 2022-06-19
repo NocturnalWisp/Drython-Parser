@@ -1,5 +1,21 @@
 System
 
-start(5&&2)
-    
+six= 6
+six = 9
+
+die(dandilion):
+    variable = 200*5/(87)
+    eat(self)
+
+    loop:
+        if cat:
+            bikb = cana = banana
+
+            banana(calamari, fish):
+                insaosa = 235
+            end
+        end
+    end
+
+    return banana
 end

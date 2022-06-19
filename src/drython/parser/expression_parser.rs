@@ -6,7 +6,7 @@ use linked_hash_map::LinkedHashMap;
 
 use crate::drython::types::Token;
 
-use super::{utility, operation_parser};
+use super::{utility::{self, ExpressionType}, operation_parser};
 use super::types::ExpressionList;
 use super::variable_parser::parse_var;
 use scope_parser::parse_scope;
@@ -39,9 +39,11 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
         }
         else {continue;}
 
+        let expression_type = utility::get_expression_type(exp);
+
         if inside_scope
         {
-            if utility::check_for_scope(exp)
+            if utility::expression_is_scope(exp)
             {
                 scope_count += 1;
             }
@@ -76,13 +78,13 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
         else
         {
             // Scope change (if/loop).
-            if utility::check_for_scope(exp)
+            if utility::expression_is_scope(exp)
             {
                 scope_start = i;
                 inside_scope = true;
             }
             // Return operation.
-            else if utility::check_for_return(exp)
+            else if expression_type == ExpressionType::Return
             {
                 match parse_return(exp)
                 {
@@ -97,7 +99,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                 }
             }
             // Variable assignment.
-            else if exp.contains("=")
+            else if expression_type == ExpressionType::Assignment
             {
                 match parse_var(exp)
                 {
@@ -112,7 +114,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                 }
             }
             // Function call.
-            else if utility::check_for_call(exp)
+            else if expression_type == ExpressionType::Call
             {
                 match parse_call(exp)
                 {
