@@ -1,17 +1,3 @@
-use std::vec;
-
-macro_rules! skip_fail_result
-{
-    ($res:expr) => {
-        match $res {
-            Some(val) => val,
-            None => {
-                continue;
-            }
-        }
-    };
-}
-
 // Inserts line numbers at the beginning of each line. Uses .lines() (seperated by \n)
 pub fn insert_line_numbers(string: String) -> Vec<String>
 {

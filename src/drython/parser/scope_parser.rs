@@ -1,4 +1,4 @@
-use crate::drython::utility::{self, get_expression_type, ExpressionType};
+use crate::drython::utility::{get_expression_type, ExpressionType};
 
 pub fn parse_scope(expression: &str) -> Result<(Option<String>, Option<String>), String>
 {
@@ -42,12 +42,12 @@ pub fn parse_scope(expression: &str) -> Result<(Option<String>, Option<String>),
 
 fn handle_scope_result(result: Vec<&str>) -> Result<(Option<String>, Option<String>), String>
 {
-    let mut scope: Option<String> = None;
+    let mut _scope: Option<String> = None;
     let mut arguments: Option<String> = None;
 
     if result.len() >= 1 && !result[0].is_empty()
     {
-        scope = Some(result[0].to_string());
+        _scope = Some(result[0].to_string());
 
         if result.len() == 2 && !result[1].is_empty()
         {
@@ -59,5 +59,5 @@ fn handle_scope_result(result: Vec<&str>) -> Result<(Option<String>, Option<Stri
         return Ok((None, None));
     }
 
-    Ok((scope, arguments))
+    Ok((_scope, arguments))
 }

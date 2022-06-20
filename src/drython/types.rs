@@ -1,19 +1,6 @@
-use std::collections::VecDeque;
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use super::script_type::ScriptType;
-
-macro_rules! skip_fail_operator
-{
-    ($res:expr) => {
-        match $res {
-            Some(val) => val,
-            _ => {
-                continue;
-            }
-        }
-    };
-}
 
 #[derive(Debug)]
 pub struct Parser

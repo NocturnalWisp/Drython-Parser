@@ -8,7 +8,7 @@ use std::fmt::Write;
 use crate::drython::parser::expression_parser::parse_expressions;
 
 use super::script_type::ScriptType;
-use super::types::{self, RegisteredList};
+use super::types;
 use super::types::Parser;
 use super::utility;
 
