@@ -20,7 +20,7 @@ impl Parser
         warning_list: &mut LinkedHashMap<usize, String>
     ) -> Result<Parser, String>
     {
-        let contents: String = match fs::read_to_string(&file_path)
+        let mut contents: String = match fs::read_to_string(&file_path)
         {
             Ok(string) => string,
             Err(_) => { return Err(format!("Error reading from file: {}", &file_path)); }
@@ -32,6 +32,9 @@ impl Parser
             write!(&mut s, "Contents of {} were empty.", file_path).ok();
             return Err(s);
         }
+
+        // Allow multiple lines using '\'
+        contents = contents.replace("\\\r\n", "");
 
         let lines: Vec<String> = 
             utility::insert_line_numbers(contents.replace(" ", ""));
