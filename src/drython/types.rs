@@ -1,4 +1,5 @@
-use std::{collections::HashMap, any::Any};
+use std::{collections::HashMap};
+use arrayref;
 
 use super::script_type::ScriptType;
 
@@ -59,6 +60,7 @@ pub struct Runner<'a>
 {
     pub parser: Parser,
     pub functions: HashMap<&'a str, fn(&str)>,
+    pub vars: HashMap<String, Token>
 }
 
 // Union of function pointer types for quick calling.

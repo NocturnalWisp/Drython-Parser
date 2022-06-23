@@ -1,6 +1,10 @@
+pub mod operation_runner;
+
 use std::{str::FromStr, collections::HashMap, hash::Hash};
 
 use crate::Parser;
+
+use self::operation_runner::run_operation;
 
 use super::types::{Runner, Token, ExpressionList};
 
@@ -19,7 +23,7 @@ impl<'a> Runner<'a>
         }
     }
 
-    fn call_internal<T: FromStr>(&self, function_name: &str, arguments: Option<&str>) -> Option<T>
+    fn call_internal(&self, function_name: &str, arguments: Option<&str>) -> Option<Token>
     {
         // Try and find if the function exists
         let found_func = self.parser.global_expressions.internal_expressions.iter()
@@ -30,11 +34,11 @@ impl<'a> Runner<'a>
                 } else {false}
             );
 
-        let mut return_result: Option<T> = None;
+        let mut return_result: Option<Token> = None;
 
         if let Some(function) = found_func
         {
-            return_result = Runner::handle_scope(function.1);
+            return_result = Runner::handle_scope(function.1, &self.vars);
         }
 
         return_result
@@ -42,9 +46,9 @@ impl<'a> Runner<'a>
 
     // Resursive function to handle calling order in internal scopes.
     // Originally called by call_internal for a parsed function.
-    fn handle_scope<T>(function: &ExpressionList) -> Option<T>
+    fn handle_scope(function: &ExpressionList, parent_vars: &HashMap<String, Token>) -> Option<Token>
     {
-        let mut return_result: Option<T> = None;
+        let mut return_result: Option<Token> = None;
         
         let mut local_vars: HashMap<String, Token> = HashMap::new();
 
@@ -57,6 +61,22 @@ impl<'a> Runner<'a>
                 _ if function.single_op.contains_key(&i) =>
                 {
                     let expression = &function.single_op[&i];
+                    let operation = run_operation(expression.1, parent_vars);
+
+                    match expression.0.as_str()
+                    {
+                        "return" =>
+                        {
+                            return_result = operation;
+                        },
+                        string =>
+                        {
+                            if let Some(result) = operation
+                            {
+                                local_vars.insert(expression.0, result);
+                            }
+                        }
+                    }
                 },
                 // Function call.
                 _ if function.multi_ops.contains_key(&i) =>
@@ -66,7 +86,7 @@ impl<'a> Runner<'a>
                 // Internal scope.
                 _ if function.internal_expressions.contains_key(&i) =>
                 {
-                    return_result = Runner::handle_scope(&function.internal_expressions[&i]);
+                    return_result = Runner::handle_scope(&function.internal_expressions[&i], parent_vars);
                 },
                 _ => ()
             }
@@ -90,5 +110,10 @@ impl<'a> Runner<'a>
     pub fn regiser_external_function(&self, function_name: &str, function: fn())
     {
 
+    }
+
+    pub fn get_variable(variable_name: &str) -> Token
+    {
+        let found_global_var 
     }
 }
