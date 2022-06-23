@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, any::Any};
 
 use super::script_type::ScriptType;
 
@@ -14,7 +14,9 @@ pub struct ExpressionList
 {
     pub scope_info: (Option<String>, Option<String>),
     pub size: usize,
+    // Return, assignment
     pub single_op: HashMap<usize, (String, Vec<Token>)>,
+    // Function call
     pub multi_ops: HashMap<usize, (String, Vec<Vec<Token>>)>,
     pub internal_expressions: HashMap<usize, ExpressionList>,
 }
@@ -53,10 +55,19 @@ pub struct Operation
     pub b: Token,
 }
 
-#[derive(Debug)]
-pub struct RegisteredList<'a>
+pub struct Runner<'a>
 {
-    pub func_list: Vec<&'a str>,
-    pub var_list: Vec<&'a str>,
-    pub error_list: Vec<String>
+    pub parser: Parser,
+    pub functions: HashMap<&'a str, fn(&str)>,
+}
+
+// Union of function pointer types for quick calling.
+pub union FunctionPointer<R, T, U>
+{
+    f1: fn(),
+    f2: fn(T),
+    f3: fn(T, U),
+    f4: fn() -> R,
+    f5: fn(T) -> R,
+    f6: fn(T, U) -> R
 }
