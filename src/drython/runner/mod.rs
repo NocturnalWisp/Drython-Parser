@@ -15,7 +15,7 @@ impl<'a> Runner<'a>
 
     }
 
-    pub fn call_function(&self, function_name: &str, args: &str)
+    pub fn call_function(&self, function_name: &str, args: Vec<Token>)
     {
         if self.functions.contains_key(function_name)
         {
@@ -23,7 +23,8 @@ impl<'a> Runner<'a>
         }
     }
 
-    fn call_internal(&self, function_name: &str, arguments: Option<&str>) -> Option<Token>
+    // Called by a function pointer from a registered internal function.
+    fn call_internal(&self, function_name: &str, arguments: Vec<Token>) -> Option<Token>
     {
         // Try and find if the function exists
         let found_func = self.parser.global_expressions.internal_expressions.iter()
@@ -38,7 +39,20 @@ impl<'a> Runner<'a>
 
         if let Some(function) = found_func
         {
-            return_result = Runner::handle_scope(function.1, &self.vars);
+            let mut local_vars: HashMap<String, Token> = HashMap::new();
+
+            let mut arg_vars: HashMap<String, Token> = HashMap::new();
+            if let Some(expected_args) = &function.1.scope_info.1
+            {
+                let parsed_arg_names: Vec<&str> = expected_args.split(",").collect();
+
+                for i in 0..parsed_arg_names.len()
+                {
+                    arg_vars.insert(parsed_arg_names[i].to_string(), arguments[i].clone());
+                }
+            }
+
+            return_result = self.handle_scope(function.1, local_vars);
         }
 
         return_result
@@ -46,7 +60,7 @@ impl<'a> Runner<'a>
 
     // Resursive function to handle calling order in internal scopes.
     // Originally called by call_internal for a parsed function.
-    fn handle_scope(function: &ExpressionList, parent_vars: &HashMap<String, Token>) -> Option<Token>
+    fn handle_scope(&self, function: &ExpressionList, parent_vars: &HashMap<String, Token>) -> Option<Token>
     {
         let mut return_result: Option<Token> = None;
         
@@ -61,7 +75,7 @@ impl<'a> Runner<'a>
                 _ if function.single_op.contains_key(&i) =>
                 {
                     let expression = &function.single_op[&i];
-                    let operation = run_operation(expression.1, parent_vars);
+                    let operation = run_operation(&expression.1, parent_vars);
 
                     match expression.0.as_str()
                     {
@@ -73,7 +87,7 @@ impl<'a> Runner<'a>
                         {
                             if let Some(result) = operation
                             {
-                                local_vars.insert(expression.0, result);
+                                local_vars.insert(string.to_string(), result);
                             }
                         }
                     }
@@ -81,12 +95,23 @@ impl<'a> Runner<'a>
                 // Function call.
                 _ if function.multi_ops.contains_key(&i) =>
                 {
+                    let expression = &function.multi_ops[&i];
+                    let mut arguments: Vec<Token> = vec![];
 
+                    for tokens in expression.1.iter()
+                    {
+                        if let Some(token) = run_operation(&tokens, parent_vars)
+                        {
+                            arguments.push(token);
+                        }
+                    }
+
+                    self.call_function(&expression.0, arguments)
                 },
                 // Internal scope.
                 _ if function.internal_expressions.contains_key(&i) =>
                 {
-                    return_result = Runner::handle_scope(&function.internal_expressions[&i], parent_vars);
+                    return_result = self.handle_scope(&function.internal_expressions[&i], parent_vars);
                 },
                 _ => ()
             }
@@ -112,8 +137,13 @@ impl<'a> Runner<'a>
 
     }
 
-    pub fn get_variable(variable_name: &str) -> Token
+    // pub fn get_variable(variable_name: &str) -> Token
+    // {
+    //     let found_global_var 
+    // }
+
+    fn convert_hashmap_reference() -> HashMap<&String, &Token>
     {
-        let found_global_var 
+        
     }
 }

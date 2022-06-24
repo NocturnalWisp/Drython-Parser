@@ -59,7 +59,7 @@ pub struct Operation
 pub struct Runner<'a>
 {
     pub parser: Parser,
-    pub functions: HashMap<&'a str, fn(&str)>,
+    pub functions: HashMap<&'a str, fn(Vec<Token>)>,
     pub vars: HashMap<String, Token>
 }
 
