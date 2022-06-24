@@ -56,20 +56,9 @@ pub struct Operation
     pub b: Token,
 }
 
-pub struct Runner<'a>
+pub struct Runner<'d>
 {
     pub parser: Parser,
-    pub functions: HashMap<&'a str, fn(Vec<Token>)>,
+    pub functions: HashMap<String, &'d dyn Fn(Vec<Token>) -> Option<Token>>,
     pub vars: HashMap<String, Token>
-}
-
-// Union of function pointer types for quick calling.
-pub union FunctionPointer<R, T, U>
-{
-    f1: fn(),
-    f2: fn(T),
-    f3: fn(T, U),
-    f4: fn() -> R,
-    f5: fn(T) -> R,
-    f6: fn(T, U) -> R
 }
