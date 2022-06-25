@@ -8,27 +8,35 @@ use self::operation_runner::run_operation;
 
 use super::types::{Runner, Token, ExpressionList};
 
-impl<'d> Runner<'d>
+impl Runner
 {
-    pub fn run_setup(& mut self, parser: Parser)
+    pub fn new(parser: Parser) -> Runner
+    {
+        Runner
+        {
+            parser,
+            functions: HashMap::new(),
+            vars: HashMap::new(),
+        }
+    }
+    
+    pub fn run_setup(& mut self)
     {
         //TODO: Support function calls outside any scopes.
 
         // Register all functions.
-        for func in &parser.global_expressions.internal_expressions
+        for func in &self.parser.global_expressions.internal_expressions
         {
             let scope_info = &func.1.scope_info;
 
             if let Some(func_name) = &scope_info.0
             {
-                let closure = |args| self.call_internal(&func_name, args);
-
-                self.functions.insert(func_name.clone(), &closure);
+                self.functions.insert(func_name.clone(), Runner::call_internal);
             }
         }
         
         // Register all variables.
-        for var in &parser.global_expressions.single_op
+        for var in &self.parser.global_expressions.single_op
         {
             let operation = run_operation(&var.1.1, &HashMap::new());
 
@@ -37,16 +45,13 @@ impl<'d> Runner<'d>
                 self.vars.insert(var.1.0.to_string(), result);
             }
         }
-
-        // Attach parser.
-        self.parser = parser;
     }
 
     pub fn call_function(&self, function_name: &str, args: Vec<Token>)
     {
         if self.functions.contains_key(function_name)
         {
-            self.functions[function_name](args);
+            self.functions[function_name](self, function_name, args);
         }
     }
 

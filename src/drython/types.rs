@@ -56,9 +56,9 @@ pub struct Operation
     pub b: Token,
 }
 
-pub struct Runner<'d>
+pub struct Runner
 {
     pub parser: Parser,
-    pub functions: HashMap<String, &'d dyn Fn(Vec<Token>) -> Option<Token>>,
+    pub functions: HashMap<String, fn(&Runner, &str, Vec<Token>) -> Option<Token>>,
     pub vars: HashMap<String, Token>
 }
