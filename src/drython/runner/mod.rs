@@ -1,6 +1,7 @@
 pub mod operation_runner;
+mod token_impl;
 
-use std::{str::FromStr, collections::HashMap, hash::Hash};
+use std::collections::HashMap;
 
 use crate::Parser;
 
@@ -15,7 +16,8 @@ impl Runner
         Runner
         {
             parser,
-            functions: HashMap::new(),
+            internal_functions: HashMap::new(),
+            external_functions: HashMap::new(),
             vars: HashMap::new(),
         }
     }
@@ -31,14 +33,14 @@ impl Runner
 
             if let Some(func_name) = &scope_info.0
             {
-                self.functions.insert(func_name.clone(), Runner::call_internal);
+                self.internal_functions.insert(func_name.clone(), Runner::call_internal);
             }
         }
         
         // Register all variables.
         for var in &self.parser.global_expressions.single_op
         {
-            let operation = run_operation(&var.1.1, &HashMap::new());
+            let operation = run_operation(self, &var.1.1, &HashMap::new());
 
             if let Some(result) = operation
             {
@@ -47,12 +49,19 @@ impl Runner
         }
     }
 
-    pub fn call_function(&self, function_name: &str, args: Vec<Token>)
+    pub fn call_function(&self, function_name: &str, args: Vec<Token>) -> Option<Token>
     {
-        if self.functions.contains_key(function_name)
+        if self.internal_functions.contains_key(function_name)
         {
-            self.functions[function_name](self, function_name, args);
+            return self.internal_functions[function_name](self, function_name, args);
         }
+
+        if self.external_functions.contains_key(function_name)
+        {
+            return self.external_functions[function_name](args);
+        }
+
+        None
     }
 
     // Called by a function pointer from a registered internal function.
@@ -120,13 +129,19 @@ impl Runner
         // Follow through and run every expression.
         for i in 0..function.size
         {
+            let mut new_parent_vars = HashMap::new();
+
+            // Keep references to allow for altering the variables.
+            Runner::extend_hash_map(&mut new_parent_vars, parent_vars);
+            Runner::extend_ref_hash_map(&mut new_parent_vars, &local_vars);
+
             match i
             {
                 // Return, Assignement.
                 _ if function.single_op.contains_key(&i) =>
                 {
                     let expression = &function.single_op[&i];
-                    let operation = run_operation(&expression.1, parent_vars);
+                    let operation = run_operation(self, &expression.1, &new_parent_vars);
 
                     match expression.0.as_str()
                     {
@@ -151,31 +166,24 @@ impl Runner
 
                     for tokens in expression.1.iter()
                     {
-                        if let Some(token) = run_operation(&tokens, parent_vars)
+                        if let Some(token) = run_operation(self, &tokens, &new_parent_vars)
                         {
                             args.push(token);
                         }
                     }
 
-                    self.call_function(&expression.0, args)
+                    self.call_function(&expression.0, args);
                 },
                 // Internal scope.
                 _ if function.internal_expressions.contains_key(&i) =>
                 {
-                    //TODO: Add local vars to parent vars to pass through next scope.
-                    let mut new_parent_vars = HashMap::new();
-
-                    // Keep references to allow for altering the variables.
-                    Runner::extend_hash_map(&mut new_parent_vars, parent_vars);
-                    Runner::extend_ref_hash_map(&mut new_parent_vars, &local_vars);
-
                     return_result = self.handle_scope(&function.internal_expressions[&i], &mut new_parent_vars);
                 },
                 _ => ()
             }
 
             // If found a return statement, break out of the expression loop.
-            if let None = return_result
+            if let Some(_) = return_result
             {
                 break;
             }
@@ -183,16 +191,10 @@ impl Runner
 
         return_result
     }
-
-    // Called from a function within a language to access an external function.
-    fn call_external(&self, function_name: &str, args: &str)
-    {
-
-    }
     
-    pub fn regiser_external_function(&self, function_name: &str, function: fn())
+    pub fn regiser_external_function(&mut self, function_name: &str, function: fn(Vec<Token>) -> Option<Token>)
     {
-
+        self.external_functions.insert(function_name.to_string(), function);
     }
 
     // pub fn get_variable(variable_name: &str) -> Token

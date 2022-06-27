@@ -1,5 +1,6 @@
 System
 
 callme():
-    banana = 7
+    banana = 7+2
+    print(banana)
 end

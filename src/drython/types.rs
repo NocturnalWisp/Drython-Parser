@@ -59,6 +59,7 @@ pub struct Operation
 pub struct Runner
 {
     pub parser: Parser,
-    pub functions: HashMap<String, fn(&Runner, &str, Vec<Token>) -> Option<Token>>,
+    pub internal_functions: HashMap<String, fn(&Runner, &str, Vec<Token>) -> Option<Token>>,
+    pub external_functions: HashMap<String, fn(Vec<Token>) -> Option<Token>>,
     pub vars: HashMap<String, Token>
 }
