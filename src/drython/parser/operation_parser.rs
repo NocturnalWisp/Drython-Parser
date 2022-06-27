@@ -13,6 +13,7 @@ enum ParseTokenType
 {
     None,
     Value,
+    StringLiteral,
     Operator,
     Parenth,
     //Function Call
@@ -39,6 +40,7 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
         let current_char_type =
         {
             if c.is_alphanumeric() || c == '.' { ParseTokenType::Value }
+            else if c == '\'' || c == '"' { ParseTokenType::StringLiteral }
             else if utility::operations_contains(c) { ParseTokenType::Operator }
             else if c == '(' || c == ')' { ParseTokenType::Parenth }
             else { ParseTokenType::None }
@@ -48,8 +50,9 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
         {
             // Continue to punt token_end until we've found a different type of token.
             if (current_char_type == last_token_type ||
-                last_token_type == ParseTokenType::Parenth || last_token_type == ParseTokenType::Call)
-                    && current_char_type != ParseTokenType::Parenth && i != string.len()-1
+                last_token_type == ParseTokenType::Parenth || last_token_type == ParseTokenType::Call || last_token_type == ParseTokenType::StringLiteral)
+                    && current_char_type != ParseTokenType::Parenth && current_char_type != ParseTokenType::StringLiteral
+                    && i != string.len()-1
             {
                 token_end = i+1;
                 continue;
@@ -57,10 +60,11 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
             // The following else ifs' handle the last token value base on what kind of change happened.
 
             // Finish off value.
-            if last_token_type == ParseTokenType::Value && current_char_type != ParseTokenType::Value
+            if (last_token_type == ParseTokenType::Value && current_char_type != ParseTokenType::Value) ||
+               last_token_type == ParseTokenType::StringLiteral
             {
-                // If current is parenth, it's the start of a call.
-                if current_char_type == ParseTokenType::Parenth
+                // If current is parenth and this is not a string literal, it's the start of a call.
+                if current_char_type == ParseTokenType::Parenth && last_token_type != ParseTokenType::StringLiteral
                 {
                     // Start call but don't reset token_start.
                     last_token_type = ParseTokenType::Call;
@@ -68,7 +72,7 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                 // Otherwise it's just a value.
                 else
                 {
-                    tokens_ptr.push(parse_token_value(&string[token_start..token_end]));
+                    tokens_ptr.push(parse_token_value(&string[token_start..token_end], last_token_type == ParseTokenType::StringLiteral));
 
                     last_token_type = ParseTokenType::None;
                     token_start = i;
@@ -152,11 +156,18 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                 // This might be the last value.
                 if i == string.len()-1
                 {
-                    tokens_ptr.push(parse_token_value(&string[token_start..i+1]));
+                    tokens_ptr.push(parse_token_value(&string[token_start..i+1], false));
                 }
 
                 token_start = i;
                 token_end = i+1;
+            }
+            else if current_char_type == ParseTokenType::StringLiteral
+            {
+                last_token_type = ParseTokenType::StringLiteral;
+
+                token_start = i+1;
+                token_end = i+2;
             }
             else if current_char_type == ParseTokenType::Operator
             {
@@ -185,8 +196,13 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
 }
 
 // Allows for the conversion from string to different types.
-fn parse_token_value<'a>(value: &'a str) -> Token
+fn parse_token_value<'a>(value: &'a str, literal: bool) -> Token
 {
+    if literal
+    {
+        return Token::String(value.to_string());
+    }
+
     if let Ok(result) = value.parse::<i32>()
     {
         Token::Int(result)

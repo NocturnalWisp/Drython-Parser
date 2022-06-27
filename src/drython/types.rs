@@ -42,6 +42,7 @@ pub enum Token
     Int(i32),
     Float(f32),
     Bool(bool),
+    String(String),
     Var(String),
     Call(String, String),
     Operation(Vec<Token>),

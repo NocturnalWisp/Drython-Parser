@@ -1,16 +1,3 @@
-// Inserts line numbers at the beginning of each line. Uses .lines() (seperated by \n)
-pub fn insert_line_numbers(string: String) -> Vec<String>
-{
-    let mut new_strings: Vec<String> = Vec::new();
-
-    for (index, line) in string.lines().enumerate()
-    {
-        new_strings.push(format!("{}){}", index+1, line));
-    }
-
-    new_strings
-}
-
 pub fn get_expression_type(string: &str) -> ExpressionType
 {
     let mut buffer = String::new();

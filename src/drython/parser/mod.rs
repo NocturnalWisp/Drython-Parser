@@ -37,7 +37,9 @@ impl Parser
         contents = contents.replace("\\\r\n", "");
 
         let lines: Vec<String> = 
-            utility::insert_line_numbers(contents.replace(" ", ""));
+            Parser::handle_content_replace(&contents);
+        
+        println!("{:?}", lines);
 
         // Determining Script Type.
         let first_line = &lines[0][2..].trim_end_matches(";");
@@ -58,5 +60,35 @@ impl Parser
             script_type: script_type,
             global_expressions,
         })
+    }
+
+    // Parses the content by removing empty spaces and placing semi colons at the end of lines.
+    fn handle_content_replace(string: &str) -> Vec<String>
+    {
+        let mut new_string: Vec<String> = Vec::new();
+
+        for (index, line) in string.lines().enumerate()
+        {
+            // Remove all empty spaces except when in string literal.
+            let mut new_line = String::new();
+            let mut in_string_literal = false;
+            for c in line.chars()
+            {
+                if !c.is_whitespace() || in_string_literal
+                {
+                    new_line.push(c);
+                }
+
+                if c == '"' || c == '\''
+                {
+                    in_string_literal = !in_string_literal;
+                }
+            }
+            //TOOO: Throw error if in string literal still because it means there is an extra quote somewhere.
+
+            new_string.push(format!("{}){}", index+1, new_line));
+        }
+    
+        new_string
     }
 }
