@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use linked_hash_map::LinkedHashMap;
 
 use crate::drython::{types::{Token, Runner}, parser::operation_parser};
-use super::token_impl;
 
 // recursive function that runs the operation from the reverse polish notation.
 pub fn run_operation(runner: &Runner, operations: &Vec<Token>,

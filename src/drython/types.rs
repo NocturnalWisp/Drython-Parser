@@ -1,5 +1,4 @@
 use std::{collections::HashMap};
-use arrayref;
 
 use super::script_type::ScriptType;
 

@@ -1,6 +1,5 @@
 pub mod drython;
 
-use std::io::stdin;
 use drython::types::Parser;
 use linked_hash_map::LinkedHashMap;
 
