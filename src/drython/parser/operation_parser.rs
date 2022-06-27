@@ -59,9 +59,11 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
             }
             // The following else ifs' handle the last token value base on what kind of change happened.
 
-            // Finish off value.
+            // Finish off value or string literal.
+            let is_literal = last_token_type == ParseTokenType::StringLiteral;
+
             if (last_token_type == ParseTokenType::Value && current_char_type != ParseTokenType::Value) ||
-               last_token_type == ParseTokenType::StringLiteral
+               is_literal
             {
                 // If current is parenth and this is not a string literal, it's the start of a call.
                 if current_char_type == ParseTokenType::Parenth && last_token_type != ParseTokenType::StringLiteral
@@ -72,10 +74,15 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                 // Otherwise it's just a value.
                 else
                 {
-                    tokens_ptr.push(parse_token_value(&string[token_start..token_end], last_token_type == ParseTokenType::StringLiteral));
+                    tokens_ptr.push(parse_token_value(&string[token_start..token_end], is_literal));
 
                     last_token_type = ParseTokenType::None;
                     token_start = i;
+
+                    if is_literal
+                    {
+                        continue;
+                    }
                 }
             }
             // Finish off operator.
