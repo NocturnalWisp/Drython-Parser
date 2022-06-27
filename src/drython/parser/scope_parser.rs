@@ -26,6 +26,19 @@ pub fn parse_scope(expression: &str) -> Result<(Option<String>, Option<String>),
 
         return handle_scope_result(vec!["if", result]);
     }
+    // Elif
+    if expression_type == ExpressionType::Elif
+    {
+        let result = exp.trim_start_matches("elif").trim_start_matches("elseif").trim_end_matches(":");
+
+        return handle_scope_result(vec!["elif", result]);
+    }
+    // Else
+    if expression_type == ExpressionType::Else
+    {
+        return handle_scope_result(vec!["else", ""]);
+    }
+
     // Function
     if expression_type == ExpressionType::Function
     {

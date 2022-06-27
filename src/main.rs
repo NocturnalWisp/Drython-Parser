@@ -26,7 +26,6 @@ fn main()
             });
 
             runner.call_function("callme", vec![]);
-            runner.call_function("callme", vec![]);
         },
         Result::Err(error) =>
         {

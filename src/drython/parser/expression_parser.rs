@@ -48,7 +48,9 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                 scope_count += 1;
             }
 
-            if exp.to_lowercase() == "end"
+            let exp_lower = exp.to_lowercase();
+
+            if exp_lower == "end" || exp_lower.starts_with("elif") || exp_lower.starts_with("elseif")  || exp_lower == "else"
             {
                 if scope_count == 0
                 {
@@ -66,10 +68,18 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
 
                     internal_expressions.insert(operation_index, internal_expression);
 
-                    inside_scope = false;
+                    if exp_lower.starts_with("elif") || exp_lower.starts_with("elseif") || exp_lower == "else"
+                    {
+                        scope_start = i;
+                    }
+                    else
+                    {
+                        inside_scope = false;
+                    }
+
                     operation_index += 1;
                 }
-                else
+                else if exp_lower == "end"
                 {
                     scope_count -= 1;
                 }

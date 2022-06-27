@@ -3,6 +3,11 @@ pub fn get_expression_type(string: &str) -> ExpressionType
     let mut buffer = String::new();
     let mut started_call_or_function = false;
 
+    if string.to_lowercase() == "else"
+    {
+        return ExpressionType::Else;
+    }
+
     for c in string.chars()
     {
         if !started_call_or_function
@@ -31,6 +36,8 @@ pub fn get_expression_type(string: &str) -> ExpressionType
         {
             "loop" => return ExpressionType::Loop,
             "if" => return ExpressionType::If,
+            "elif" => return ExpressionType::Elif,
+            "elseif" => return ExpressionType::Elif,
             "return" => return ExpressionType::Return,
             "while" => return ExpressionType::While,
             _ => ()
@@ -56,6 +63,8 @@ pub enum ExpressionType
     Call,
     Return,
     If,
+    Elif,
+    Else,
     Loop,
     While,
 }

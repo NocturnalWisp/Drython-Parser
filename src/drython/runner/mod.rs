@@ -128,6 +128,8 @@ impl Runner
         
         let mut local_vars: HashMap<String, Token> = HashMap::new();
 
+        let mut previous_if_failed = false;
+
         // Follow through and run every expression.
         for i in 0..function.size
         {
@@ -186,18 +188,50 @@ impl Runner
                         {
                             "if" => 
                             {
-                                // Only handle scope if the "if operation" is true.
                                 if let Some(if_op) = &function.scope_info.1
                                 {
+                                    // Only handle scope if the "if operation" is true.
                                     let operation = parse_operation(if_op, &mut LinkedHashMap::new());
 
-                                    if let Some(Token::Bool(result)) = run_operation(self, &operation, &new_parent_vars)
+                                    if let Some(Token::Bool(true)) = run_operation(self, &operation, &new_parent_vars)
                                     {
-                                        if result
+                                        return_result = self.handle_scope(function, &mut new_parent_vars);
+                                        previous_if_failed = false;
+                                    }
+                                    else
+                                    {
+                                        previous_if_failed = true;
+                                    }
+                                }
+                            }
+                            // Only run if "if" failed
+                            "elif" =>
+                            {
+                                if previous_if_failed
+                                {
+                                    if let Some(if_op) = &function.scope_info.1
+                                    {
+                                        // Only handle scope if the "elif operation" is true.
+                                        let operation = parse_operation(if_op, &mut LinkedHashMap::new());
+
+                                        if let Some(Token::Bool(true)) = run_operation(self, &operation, &new_parent_vars)
                                         {
-                                            return_result = self.handle_scope(function, &mut new_parent_vars)
+                                            return_result = self.handle_scope(function, &mut new_parent_vars);
+                                            previous_if_failed = false;
+                                        }
+                                        else
+                                        {
+                                            previous_if_failed = true;
                                         }
                                     }
+                                }
+                            }
+                            // Only run if "if" failed
+                            "else" =>
+                            {
+                                if previous_if_failed
+                                {
+                                    return_result = self.handle_scope(function, &mut new_parent_vars);
                                 }
                             }
                             _ => return_result = self.handle_scope(function, &mut new_parent_vars)
@@ -205,7 +239,7 @@ impl Runner
                     }
                     else
                     {
-                        return_result = self.handle_scope(function, &mut new_parent_vars)
+                        return_result = self.handle_scope(function, &mut new_parent_vars);
                     }
                 },
                 _ => ()
