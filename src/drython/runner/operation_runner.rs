@@ -19,22 +19,19 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
 
             if let (Some(unhandled1), Some(unhandled2)) = (&first, &second)
             {
-                // Check for special type to further handle.
-                if let (Some(token1), Some(token2)) =
-                    (handle_token_type(runner, unhandled1, parent_vars), handle_token_type(runner, unhandled1, parent_vars))
+                let handled_1 = handle_token_type(runner, unhandled1, parent_vars);
+                let handled_2 = handle_token_type(runner, unhandled2, parent_vars);
+
+                // Run operations based on whether the token has been handled or not.
+                if let Some(result) = match (handled_1, handled_2)
                 {
-                    if let Some(result) = run_operation_by_type(&token1, &token2, operator)
-                    {
-                        stack.push(result);
-                    }
+                    (Some(token1), Some(token2)) => run_operation_by_type(&token1, &token2, operator),
+                    (None, Some(token2)) => run_operation_by_type(unhandled1, &token2, operator),
+                    (Some(token1), None) => run_operation_by_type(&token1, unhandled2, operator),
+                    _ => run_operation_by_type(unhandled1, unhandled2, operator)
                 }
-                // Just a normal value type.
-                else
                 {
-                    if let Some(result) = run_operation_by_type(&unhandled1, &unhandled2, operator)
-                    {
-                        stack.push(result);
-                    }
+                    stack.push(result);
                 }
             }
         }
@@ -117,6 +114,8 @@ fn run_operation_by_type(a: &Token, b: &Token, operation: &str) -> Option<Token>
         ">" => a.compare_gt(b),
         "<=" => a.compare_lte(b),
         "<" => a.compare_lt(b),
+        "==" => a.compare_eq(b),
+        "!=" => a.compare_neq(b),
         _ => None
     }
 }

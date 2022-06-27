@@ -2,5 +2,8 @@ System
 
 callme():
     banana = 7+2
-    print(banana)
+
+    if banana != 2
+        print(banana)
+    end
 end

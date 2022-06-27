@@ -3,11 +3,13 @@ mod token_impl;
 
 use std::collections::HashMap;
 
+use linked_hash_map::LinkedHashMap;
+
 use crate::Parser;
 
 use self::operation_runner::run_operation;
 
-use super::types::{Runner, Token, ExpressionList};
+use super::{types::{Runner, Token, ExpressionList}, parser::operation_parser::parse_operation};
 
 impl Runner
 {
@@ -177,7 +179,34 @@ impl Runner
                 // Internal scope.
                 _ if function.internal_expressions.contains_key(&i) =>
                 {
-                    return_result = self.handle_scope(&function.internal_expressions[&i], &mut new_parent_vars);
+                    let function = &function.internal_expressions[&i];
+                    if let Some(scope_name) = &function.scope_info.0
+                    {
+                        match scope_name.as_str()
+                        {
+                            "if" => 
+                            {
+                                // Only handle scope if the "if operation" is true.
+                                if let Some(if_op) = &function.scope_info.1
+                                {
+                                    let operation = parse_operation(if_op, &mut LinkedHashMap::new());
+
+                                    if let Some(Token::Bool(result)) = run_operation(self, &operation, &new_parent_vars)
+                                    {
+                                        if result
+                                        {
+                                            return_result = self.handle_scope(function, &mut new_parent_vars)
+                                        }
+                                    }
+                                }
+                            }
+                            _ => return_result = self.handle_scope(function, &mut new_parent_vars)
+                        }
+                    }
+                    else
+                    {
+                        return_result = self.handle_scope(function, &mut new_parent_vars)
+                    }
                 },
                 _ => ()
             }
