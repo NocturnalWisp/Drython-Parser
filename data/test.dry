@@ -1,13 +1,10 @@
 System
 
-a = 7 +1
-
 callme():
-    if a == 9
-        print("A")
-    else if a == 10
-        print("B")
-    else
-        print("C")
+    i = 0
+    loop:
+        i = i + 1
+        print(i)
+        break;
     end
 end

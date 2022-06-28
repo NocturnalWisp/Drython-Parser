@@ -46,7 +46,11 @@ pub enum Token
     Var(String),
     Call(String, String),
     Operation(Vec<Token>),
-    Operator(String)
+    Operator(String),
+
+    // Internal use only.
+    // Allows an inner scope to break a loop.
+    Break
 }
 
 #[derive(Debug)]

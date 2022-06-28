@@ -98,7 +98,7 @@ impl Runner
             Runner::extend_ref_hash_map(&mut scope_vars, &arg_vars);
             Runner::extend_ref_hash_map(&mut scope_vars, &self.vars);
 
-            return_result = self.handle_scope(function.1, &mut scope_vars);
+            return_result = self.handle_scope(function.1, &mut scope_vars, false);
         }
 
         return_result
@@ -122,7 +122,7 @@ impl Runner
 
     // Resursive function to handle calling order in internal scopes.
     // Originally called by call_internal for a parsed function.
-    fn handle_scope(&self, function: &ExpressionList, parent_vars: &mut HashMap<&String, &Token>) -> Option<Token>
+    fn handle_scope(&self, function: &ExpressionList, parent_vars: &mut HashMap<&String, &Token>, is_loop: bool) -> Option<Token>
     {
         let mut return_result: Option<Token> = None;
         
@@ -141,7 +141,7 @@ impl Runner
 
             match i
             {
-                // Return, Assignement.
+                // Return, Assignement, loop controls.
                 _ if function.single_op.contains_key(&i) =>
                 {
                     let expression = &function.single_op[&i];
@@ -153,11 +153,36 @@ impl Runner
                         {
                             return_result = operation;
                         },
+                        "break" =>
+                        {
+                            if is_loop
+                            {
+                                // Break completely out of outer scope loop.
+                                return_result = Some(Token::Break);
+                                break;
+                            }
+                        }
+                        "continue" =>
+                        {
+                            if is_loop
+                            {
+                                // Break out of current loop. Which continues in the outer scope loop.
+                                break;
+                            }
+                        },
                         string =>
                         {
                             if let Some(result) = operation
                             {
+                                // Check if any of the parent hashmaps contains this var.
+                                // if parent_vars.contains_key(string)
+                                // {
+                                //     let token = parent_vars.entry(string);
+                                // }
+                                // else
+                                // {
                                 local_vars.insert(string.to_string(), result);
+                                // }
                             }
                         }
                     }
@@ -195,7 +220,7 @@ impl Runner
 
                                     if let Some(Token::Bool(true)) = run_operation(self, &operation, &new_parent_vars)
                                     {
-                                        return_result = self.handle_scope(function, &mut new_parent_vars);
+                                        return_result = self.handle_scope(function, &mut new_parent_vars, false);
                                         previous_if_failed = false;
                                     }
                                     else
@@ -203,7 +228,7 @@ impl Runner
                                         previous_if_failed = true;
                                     }
                                 }
-                            }
+                            },
                             // Only run if "if" failed
                             "elif" =>
                             {
@@ -216,7 +241,7 @@ impl Runner
 
                                         if let Some(Token::Bool(true)) = run_operation(self, &operation, &new_parent_vars)
                                         {
-                                            return_result = self.handle_scope(function, &mut new_parent_vars);
+                                            return_result = self.handle_scope(function, &mut new_parent_vars, false);
                                             previous_if_failed = false;
                                         }
                                         else
@@ -225,21 +250,38 @@ impl Runner
                                         }
                                     }
                                 }
-                            }
+                            },
                             // Only run if "if" failed
                             "else" =>
                             {
                                 if previous_if_failed
                                 {
-                                    return_result = self.handle_scope(function, &mut new_parent_vars);
+                                    return_result = self.handle_scope(function, &mut new_parent_vars, false);
+                                }
+                            },
+                            "loop" =>
+                            {
+                                loop
+                                {
+                                    return_result = self.handle_scope(function, &mut new_parent_vars, true);
+
+                                    if let Some(Token::Break) = return_result
+                                    {
+                                        return_result = None;
+                                        break;
+                                    }
+                                    else if let Some(_) = return_result
+                                    {
+                                        break;
+                                    }
                                 }
                             }
-                            _ => return_result = self.handle_scope(function, &mut new_parent_vars)
+                            _ => return_result = self.handle_scope(function, &mut new_parent_vars, false)
                         }
                     }
                     else
                     {
-                        return_result = self.handle_scope(function, &mut new_parent_vars);
+                        return_result = self.handle_scope(function, &mut new_parent_vars, false);
                     }
                 },
                 _ => ()
@@ -259,9 +301,4 @@ impl Runner
     {
         self.external_functions.insert(function_name.to_string(), function);
     }
-
-    // pub fn get_variable(variable_name: &str) -> Token
-    // {
-    //     let found_global_var 
-    // }
 }

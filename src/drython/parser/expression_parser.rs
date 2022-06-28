@@ -145,6 +145,17 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                     Err(error) => {warning_list.insert(line_start+i, error);}
                 }
             }
+            // loop control functions
+            else if expression_type == ExpressionType::Break
+            {
+                single_op.insert(operation_index, ("break".to_string(), vec![]));
+                operation_index += 1;
+            }
+            else if expression_type == ExpressionType::Continue
+            {
+                single_op.insert(operation_index, ("continue".to_string(), vec![]));
+                operation_index += 1;
+            }
         }
     }
 

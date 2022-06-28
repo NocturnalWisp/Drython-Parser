@@ -3,10 +3,13 @@ pub fn get_expression_type(string: &str) -> ExpressionType
     let mut buffer = String::new();
     let mut started_call_or_function = false;
 
-    if string.to_lowercase() == "else"
+    match string.to_lowercase().as_str()
     {
-        return ExpressionType::Else;
-    }
+        "else" => {return ExpressionType::Else;}
+        "break" => {return ExpressionType::Break;}
+        "continue" => {return ExpressionType::Continue;}
+        _ => ()
+    };
 
     for c in string.chars()
     {
@@ -67,6 +70,8 @@ pub enum ExpressionType
     Else,
     Loop,
     While,
+    Break,
+    Continue,
 }
 
 pub fn expression_is_scope(string: &str) -> bool

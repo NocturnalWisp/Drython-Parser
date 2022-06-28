@@ -74,7 +74,9 @@ impl Parser
             let mut in_string_literal = false;
             for c in line.chars()
             {
-                if !c.is_whitespace() || in_string_literal
+                // Don't include white space unless in string literal
+                // Don't include preplaced semi colons unless in string literal.
+                if (!c.is_whitespace() && c != ';') || in_string_literal
                 {
                     new_line.push(c);
                 }
