@@ -83,8 +83,8 @@ pub fn expression_is_scope(string: &str) -> bool
     }
 }
 
-pub const OPERATIONS: [&str; 18] = [
-    "^", "/", "*", "%", "+", "-", "++", "--", "**", "//",
+pub const OPERATIONS: [&str; 14] = [
+    "^", "/", "*", "%", "+", "-",
     "&&", "||",
     ">", "<", "<=", ">=", "==", "!="
 ];
