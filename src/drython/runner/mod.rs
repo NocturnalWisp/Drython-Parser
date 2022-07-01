@@ -82,7 +82,7 @@ impl Runner
 
         if let Some(function) = found_func
         {
-            let mut scope_vars: HashMap<&String, &Token> = HashMap::new();
+            let mut scope_vars: HashMap<String, Token> = HashMap::new();
 
             let mut arg_vars: HashMap<String, Token> = HashMap::new();
             if let Some(expected_args) = &function.1.scope_info.1
@@ -95,8 +95,8 @@ impl Runner
                 }
             }
 
-            Runner::extend_ref_hash_map(&mut scope_vars, &arg_vars);
-            Runner::extend_ref_hash_map(&mut scope_vars, &self.vars);
+            scope_vars.extend(self.vars.clone());
+            scope_vars.extend(arg_vars);
 
             return_result = self.handle_scope(function.1, &mut scope_vars, false);
         }
@@ -104,48 +104,26 @@ impl Runner
         return_result
     }
 
-    fn extend_ref_hash_map<'a>(target_map: &mut HashMap<&'a String, &'a Token>, map: &'a HashMap<String, Token>)
-    {
-        for item in map.iter()
-        {
-            target_map.insert(item.0, item.1);
-        }
-    }
-
-    fn extend_hash_map<'a>(target_map: &mut HashMap<&'a String, &'a Token>, map: &'a HashMap<&String, &Token>)
-    {
-        for item in map.iter()
-        {
-            target_map.insert(item.0, item.1);
-        }
-    }
-
     // Resursive function to handle calling order in internal scopes.
     // Originally called by call_internal for a parsed function.
-    fn handle_scope(&self, function: &ExpressionList, parent_vars: &mut HashMap<&String, &Token>, is_loop: bool) -> Option<Token>
+    fn handle_scope(&self, function: &ExpressionList, vars: &mut HashMap<String, Token>, is_loop: bool) -> Option<Token>
     {
         let mut return_result: Option<Token> = None;
         
-        let mut local_vars: HashMap<String, Token> = HashMap::new();
+        let mut local_var_refs: Vec<&str> = Vec::new();
 
         let mut previous_if_failed = false;
 
         // Follow through and run every expression.
         for i in 0..function.size
         {
-            let mut new_parent_vars = HashMap::new();
-
-            // Keep references to allow for altering the variables.
-            Runner::extend_hash_map(&mut new_parent_vars, parent_vars);
-            Runner::extend_ref_hash_map(&mut new_parent_vars, &local_vars);
-
             match i
             {
                 // Return, Assignement, loop controls.
                 _ if function.single_op.contains_key(&i) =>
                 {
                     let expression = &function.single_op[&i];
-                    let operation = run_operation(self, &expression.1, &new_parent_vars);
+                    let operation = run_operation(self, &expression.1, &vars);
 
                     match expression.0.as_str()
                     {
@@ -175,14 +153,19 @@ impl Runner
                             if let Some(result) = operation
                             {
                                 // Check if any of the parent hashmaps contains this var.
-                                // if parent_vars.contains_key(string)
-                                // {
-                                //     let token = parent_vars.entry(string);
-                                // }
-                                // else
-                                // {
-                                local_vars.insert(string.to_string(), result);
-                                // }
+                                if vars.contains_key(string)
+                                {
+                                    vars.entry(string.to_string()).and_modify(
+                                        |x|
+                                        {
+                                            *x = result
+                                        });
+                                }
+                                else
+                                {
+                                    vars.insert(string.to_string(), result);
+                                    local_var_refs.push(string)
+                                }
                             }
                         }
                     }
@@ -195,7 +178,7 @@ impl Runner
 
                     for tokens in expression.1.iter()
                     {
-                        if let Some(token) = run_operation(self, &tokens, &new_parent_vars)
+                        if let Some(token) = run_operation(self, &tokens, &vars)
                         {
                             args.push(token);
                         }
@@ -218,9 +201,9 @@ impl Runner
                                     // Only handle scope if the "if operation" is true.
                                     let operation = parse_operation(if_op, &mut LinkedHashMap::new());
 
-                                    if let Some(Token::Bool(true)) = run_operation(self, &operation, &new_parent_vars)
+                                    if let Some(Token::Bool(true)) = run_operation(self, &operation, &vars)
                                     {
-                                        return_result = self.handle_scope(function, &mut new_parent_vars, false);
+                                        return_result = self.handle_scope(function, vars, is_loop);
                                         previous_if_failed = false;
                                     }
                                     else
@@ -239,9 +222,9 @@ impl Runner
                                         // Only handle scope if the "elif operation" is true.
                                         let operation = parse_operation(if_op, &mut LinkedHashMap::new());
 
-                                        if let Some(Token::Bool(true)) = run_operation(self, &operation, &new_parent_vars)
+                                        if let Some(Token::Bool(true)) = run_operation(self, &operation, &vars)
                                         {
-                                            return_result = self.handle_scope(function, &mut new_parent_vars, false);
+                                            return_result = self.handle_scope(function, vars, is_loop);
                                             previous_if_failed = false;
                                         }
                                         else
@@ -256,14 +239,14 @@ impl Runner
                             {
                                 if previous_if_failed
                                 {
-                                    return_result = self.handle_scope(function, &mut new_parent_vars, false);
+                                    return_result = self.handle_scope(function, vars, is_loop);
                                 }
                             },
                             "loop" =>
                             {
                                 loop
                                 {
-                                    return_result = self.handle_scope(function, &mut new_parent_vars, true);
+                                    return_result = self.handle_scope(function, vars, true);
 
                                     if let Some(Token::Break) = return_result
                                     {
@@ -276,12 +259,12 @@ impl Runner
                                     }
                                 }
                             }
-                            _ => return_result = self.handle_scope(function, &mut new_parent_vars, false)
+                            _ => return_result = self.handle_scope(function, vars, is_loop)
                         }
                     }
                     else
                     {
-                        return_result = self.handle_scope(function, &mut new_parent_vars, false);
+                        return_result = self.handle_scope(function, vars, is_loop);
                     }
                 },
                 _ => ()
@@ -292,6 +275,11 @@ impl Runner
             {
                 break;
             }
+        }
+
+        for local_var in local_var_refs
+        {
+            vars.remove(local_var);
         }
 
         return_result

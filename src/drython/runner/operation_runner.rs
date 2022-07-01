@@ -6,7 +6,7 @@ use crate::drython::{types::{Token, Runner}, parser::operation_parser};
 
 // recursive function that runs the operation from the reverse polish notation.
 pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
-    parent_vars: &HashMap<&String, &Token>) -> Option<Token>
+    vars: &HashMap<String, Token>) -> Option<Token>
 {
     let mut stack: Vec<Token> = vec![];
 
@@ -19,8 +19,8 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
 
             if let (Some(unhandled1), Some(unhandled2)) = (&first, &second)
             {
-                let handled_1 = handle_token_type(runner, unhandled1, parent_vars);
-                let handled_2 = handle_token_type(runner, unhandled2, parent_vars);
+                let handled_1 = handle_token_type(runner, unhandled1, vars);
+                let handled_2 = handle_token_type(runner, unhandled2, vars);
 
                 // Run operations based on whether the token has been handled or not.
                 if let Some(result) = match (handled_1, handled_2)
@@ -45,7 +45,7 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
     if let Some(token) = stack.pop()
     {
         // Secondary handle in case it was a single token and not a full operation.
-        if let Some(handled_token) = handle_token_type(runner, &token, parent_vars)
+        if let Some(handled_token) = handle_token_type(runner, &token, vars)
         {
             return Some(handled_token);
         }
@@ -58,7 +58,7 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
     None
 }
 
-fn handle_token_type(runner: &Runner, token: &Token, parent_vars: &HashMap<&String, &Token>) -> Option<Token>
+fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Token>) -> Option<Token>
 {
     match token
     {
@@ -69,7 +69,7 @@ fn handle_token_type(runner: &Runner, token: &Token, parent_vars: &HashMap<&Stri
 
             for arg in args.split(",")
             {
-                if let Some(ran_token) = run_operation(runner, &operation_parser::parse_operation(arg, &mut LinkedHashMap::new()), parent_vars)
+                if let Some(ran_token) = run_operation(runner, &operation_parser::parse_operation(arg, &mut LinkedHashMap::new()), vars)
                 {
                     parsed_args.push(ran_token);
                 }
@@ -80,13 +80,13 @@ fn handle_token_type(runner: &Runner, token: &Token, parent_vars: &HashMap<&Stri
         Token::Operation(op) =>
         {
             // Run operation recursively.
-            return run_operation(runner, op, parent_vars);
+            return run_operation(runner, op, vars);
         },
         Token::Var(name) =>
         {
-            if parent_vars.contains_key(name)
+            if vars.contains_key(name)
             {
-                return Some(parent_vars[name].clone());
+                return Some(vars[name].clone());
             }
         },
         _ => { }

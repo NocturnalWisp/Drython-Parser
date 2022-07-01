@@ -1,10 +1,16 @@
 System
 
 callme():
-    i = 0
-    loop:
-        i = i + 1
-        print(i)
-        break;
+    if true:
+        i = 0
+        loop:
+            i = i + 1
+
+            print(i)
+
+            if i >= 5:
+                break;
+            end
+        end
     end
 end
