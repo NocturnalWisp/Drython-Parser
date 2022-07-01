@@ -50,7 +50,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
 
             let exp_lower = exp.to_lowercase();
 
-            if exp_lower == "end" || exp_lower.starts_with("elif") || exp_lower.starts_with("elseif")  || exp_lower == "else"
+            if exp_lower == "end" || exp_lower.starts_with("elif") || exp_lower.starts_with("elseif")  || exp_lower.starts_with("else")
             {
                 if scope_count == 0
                 {
@@ -68,7 +68,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
 
                     internal_expressions.insert(operation_index, internal_expression);
 
-                    if exp_lower.starts_with("elif") || exp_lower.starts_with("elseif") || exp_lower == "else"
+                    if exp_lower.starts_with("elif") || exp_lower.starts_with("elseif") || exp_lower.starts_with("else")
                     {
                         scope_start = i;
                     }

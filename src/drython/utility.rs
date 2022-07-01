@@ -5,7 +5,6 @@ pub fn get_expression_type(string: &str) -> ExpressionType
 
     match string.to_lowercase().as_str()
     {
-        "else" => {return ExpressionType::Else;}
         "break" => {return ExpressionType::Break;}
         "continue" => {return ExpressionType::Continue;}
         _ => ()
@@ -41,8 +40,8 @@ pub fn get_expression_type(string: &str) -> ExpressionType
             "if" => return ExpressionType::If,
             "elif" => return ExpressionType::Elif,
             "elseif" => return ExpressionType::Elif,
+            "else" => return ExpressionType::Else,
             "return" => return ExpressionType::Return,
-            "while" => return ExpressionType::While,
             _ => ()
         }
     }
@@ -69,7 +68,6 @@ pub enum ExpressionType
     Elif,
     Else,
     Loop,
-    While,
     Break,
     Continue,
 }
@@ -81,13 +79,12 @@ pub fn expression_is_scope(string: &str) -> bool
         ExpressionType::Function => true,
         ExpressionType::If => true,
         ExpressionType::Loop => true,
-        ExpressionType::While => true,
         _ => false
     }
 }
 
-pub const OPERATIONS: [&str; 14] = [
-    "^", "/", "*", "%", "+", "-",
+pub const OPERATIONS: [&str; 18] = [
+    "^", "/", "*", "%", "+", "-", "++", "--", "**", "//",
     "&&", "||",
     ">", "<", "<=", ">=", "==", "!="
 ];

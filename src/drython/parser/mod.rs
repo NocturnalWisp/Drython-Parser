@@ -74,9 +74,17 @@ impl Parser
             let mut in_string_literal = false;
             for c in line.chars()
             {
-                // Don't include white space unless in string literal
-                // Don't include preplaced semi colons unless in string literal.
-                if (!c.is_whitespace() && c != ';') || in_string_literal
+                // Start new line line after semi-colons.
+                if c == ';'
+                {
+                    new_string.push(format!("{}){}", index+1, new_line));
+                    new_line = String::new();
+                    in_string_literal = false;
+                    continue;
+                }
+
+                // Don't include white space unless in string literal.
+                if (!c.is_whitespace()) || in_string_literal
                 {
                     new_line.push(c);
                 }
