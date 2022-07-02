@@ -14,6 +14,8 @@ enum ParseTokenType
     None,
     Value,
     StringLiteral,
+    Collection,
+
     Operator,
     Parenth,
     //Function Call
@@ -29,6 +31,7 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
     let mut token_end: usize = 0;
     
     let mut inner_parenth_count: i8 = 0;
+    let mut inner_collection_count: i8 = 0;
 
     // optional char is for the char operation leading to the next option.
     let mut tokens: Vec<Token> = Vec::new();
@@ -43,19 +46,42 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
             else if c == '\'' || c == '"' { ParseTokenType::StringLiteral }
             else if utility::operations_contains(c) { ParseTokenType::Operator }
             else if c == '(' || c == ')' { ParseTokenType::Parenth }
+            else if c == '[' || c == ']' { ParseTokenType::Collection }
             else { ParseTokenType::None }
         };
 
         if last_token_type != ParseTokenType::None
         {
-            // Continue to punt token_end until we've found a different type of token.
-            if (current_char_type == last_token_type ||
-                last_token_type == ParseTokenType::Parenth || last_token_type == ParseTokenType::Call || last_token_type == ParseTokenType::StringLiteral)
-                    && current_char_type != ParseTokenType::Parenth && current_char_type != ParseTokenType::StringLiteral
-                    && i != string.len()-1
+            // Determine if the for loop should continue to the next character.
+            // Current is still apart of the last type.
+            if i != string.len()-1
             {
-                token_end = i+1;
-                continue;
+                // Enum values not present in match are skipped.
+                // Follow the "a encounters b" pattern.
+                // Last token type may remain starting on "token_start".
+                let skip_current = match (&last_token_type, &current_char_type)
+                {
+                    (ParseTokenType::Value, ParseTokenType::StringLiteral) => false,
+                    (ParseTokenType::Value, ParseTokenType::Collection) => false,
+                    (ParseTokenType::Value, ParseTokenType::Operator) => false,
+                    (ParseTokenType::Value, ParseTokenType::Parenth) => false,
+
+                    (ParseTokenType::Operator, ParseTokenType::Value) => false,
+                    (ParseTokenType::Operator, ParseTokenType::StringLiteral) => false,
+                    (ParseTokenType::Operator, ParseTokenType::Collection) => false,
+                    (ParseTokenType::Operator, ParseTokenType::Parenth) => false,
+
+                    (ParseTokenType::StringLiteral, ParseTokenType::StringLiteral) => false,
+                    (ParseTokenType::Parenth, ParseTokenType::Parenth) => false,
+                    (ParseTokenType::Collection, ParseTokenType::Collection) => false,
+                    _ => true
+                };
+
+                if skip_current
+                {
+                    token_end = i+1;
+                    continue;
+                }
             }
             // The following else ifs' handle the last token value base on what kind of change happened.
 
@@ -66,7 +92,8 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                is_literal
             {
                 // If current is parenth and this is not a string literal, it's the start of a call.
-                if current_char_type == ParseTokenType::Parenth && last_token_type != ParseTokenType::StringLiteral
+                if current_char_type == ParseTokenType::Parenth &&
+                    last_token_type != ParseTokenType::StringLiteral && last_token_type != ParseTokenType::Collection
                 {
                     // Start call but don't reset token_start.
                     last_token_type = ParseTokenType::Call;
@@ -100,6 +127,32 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
 
                 last_token_type = ParseTokenType::None;
                 token_start = i;
+            }
+            // Finish off collection.
+            else if last_token_type == ParseTokenType::Collection
+            {
+                if c == '['
+                {
+                    inner_collection_count += 1;
+                }
+                else if c == ']'
+                {
+                    if inner_collection_count == 0
+                    {
+                        let collection_operations = string[token_start..token_end].split("|").map(|x| parse_operation(x, warning_list)).collect::<Vec<Vec<Token>>>();
+
+                        tokens_ptr.push(Token::Collection(collection_operations));
+
+                        last_token_type = ParseTokenType::None;
+                        token_start = i;
+
+                        continue;
+                    }
+                    else
+                    {
+                        inner_collection_count -= 1;
+                    }
+                }
             }
             // Handle an internal operation using recursion on the current function.
             else if last_token_type == ParseTokenType::Parenth
@@ -168,6 +221,13 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
 
                 token_start = i;
                 token_end = i+1;
+            }
+            else if current_char_type == ParseTokenType::Collection
+            {
+                last_token_type = ParseTokenType::Collection;
+
+                token_start = i+1;
+                token_end = i+2;
             }
             else if current_char_type == ParseTokenType::StringLiteral
             {

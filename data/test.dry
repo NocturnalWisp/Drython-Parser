@@ -1,21 +1,5 @@
 System
 
 callme():
-    if true:
-        i = 0
-        loop:
-            i = i + 1
-
-            print(i)
-
-            if i >= 5:
-                print("Done")
-                break;
-            elif i == 2:
-                print("Yay!")
-            else:
-                print("Yaydsudfiuvgn")
-            end
-        end
-    end
+    i = [10|14|"bajkfnf"|true|afnsd(wskln)] + 8 / 2
 end

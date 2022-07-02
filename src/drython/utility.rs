@@ -56,7 +56,7 @@ pub fn get_expression_type(string: &str) -> ExpressionType
     ExpressionType::None
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum ExpressionType
 {
     None,

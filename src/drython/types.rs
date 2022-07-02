@@ -43,6 +43,8 @@ pub enum Token
     Float(f32),
     Bool(bool),
     String(String),
+    Collection(Vec<Vec<Token>>),
+    
     Var(String),
     Call(String, String),
     Operation(Vec<Token>),
