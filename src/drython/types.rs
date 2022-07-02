@@ -39,11 +39,12 @@ impl ExpressionList
 #[derive(Debug, Clone)]
 pub enum Token
 {
+    Null,
     Int(i32),
     Float(f32),
     Bool(bool),
     String(String),
-    Collection(Vec<Vec<Token>>),
+    Collection(Vec<Token>),
     
     Var(String),
     Call(String, String),

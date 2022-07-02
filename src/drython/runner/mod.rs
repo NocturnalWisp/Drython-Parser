@@ -9,7 +9,7 @@ use crate::Parser;
 
 use self::operation_runner::run_operation;
 
-use super::{types::{Runner, Token, ExpressionList}, parser::operation_parser::parse_operation};
+use super::{types::{Runner, Token, ExpressionList}, parser::operation_parser::parse_operation, utility};
 
 impl Runner
 {
@@ -87,11 +87,14 @@ impl Runner
             let mut arg_vars: HashMap<String, Token> = HashMap::new();
             if let Some(expected_args) = &function.1.scope_info.1
             {
-                let parsed_arg_names: Vec<&str> = expected_args.split(",").collect();
+                let mut parsed_arg_names: Vec<String> = utility::split_by_comma(expected_args);
 
                 for i in 0..parsed_arg_names.len()
                 {
-                    arg_vars.insert(parsed_arg_names[i].to_string(), arguments[i].clone());
+                    arg_vars.insert(
+                        parsed_arg_names.pop().unwrap_or("null".to_string()),
+                        arguments[i].clone()
+                    );
                 }
             }
 

@@ -1,5 +1,5 @@
 System
 
 callme():
-    i = [10|14|"bajkfnf"|true|afnsd(wskln)] + 8 / 2
+    print([10,14+17,"bajkfnf",true,afnsd(wskln)]*2)
 end

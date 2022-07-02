@@ -137,8 +137,6 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                             operations.push(operation_parser::parse_operation(&statement, warning_list));
                         }
 
-                        operations.reverse();
-
                         multi_ops.insert(operation_index, (result.0, operations));
                         operation_index += 1;
                     },
@@ -179,14 +177,7 @@ fn parse_call(call: &str) -> Result<(String, Vec<String>), String>
     {
         function = first.0.to_string();
         
-        if let Some(second) = first.1.split_once(")")
-        {
-            arguments = second.0.split(",").map(|x|x.to_string()).collect()
-        }
-        else
-        {
-            return Err("Failed to parse call.\nInvalid function arguments.".to_string());
-        }
+        arguments = utility::split_by_comma(first.1.trim_end_matches(")"));
     }
     else
     {

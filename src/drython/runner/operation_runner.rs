@@ -89,6 +89,24 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                 return Some(vars[name].clone());
             }
         },
+        Token::Collection(items) =>
+        {
+            let mut new_items: Vec<Token> = Vec::new();
+
+            for item in items
+            {
+                if let Some(token_result) = handle_token_type(runner, item, vars)
+                {
+                    new_items.push(token_result);
+                }
+                else
+                {
+                    new_items.push(item.clone());
+                }
+            }
+
+            return Some(Token::Collection(new_items));
+        }
         _ => { }
     }
 

@@ -83,6 +83,40 @@ pub fn expression_is_scope(string: &str) -> bool
     }
 }
 
+// Allows for splitting operations by comma.
+// Avoids internal calls and scopes.
+pub fn split_by_comma(string: &str) -> Vec<String>
+{
+    let mut result: Vec<String> = Vec::new();
+
+    let mut prev_start = 0;
+    let mut in_count = 0;
+
+    for (i, c) in string.chars().enumerate()
+    {
+        if (c == ',' && in_count == 0) || i == string.len()-1
+        {
+            let end = if i != string.len() - 1 {i} else {i+1};
+            result.push(string[prev_start..end].to_string());
+            prev_start = i+1;
+        }
+
+        if c == '(' || c == '['
+        {
+            in_count += 1;
+        }
+        else if c == ')' || c == ']'
+        {
+            in_count -= 1;
+        }
+
+        // If in count is ever less than 0, there is a bracket in excess.
+        //TODO: Throw an error.
+    }
+
+    result
+}
+
 pub const OPERATIONS: [&str; 14] = [
     "^", "/", "*", "%", "+", "-",
     "&&", "||",
