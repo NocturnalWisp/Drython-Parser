@@ -85,45 +85,11 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
         Token::Var(name) =>
         {
             // Deal with any accessors.
-            let var_split = name.split('.').collect::<Vec<&str>>();
             let mut var: Token = Token::Null;
 
-            if vars.contains_key(var_split[0])
+            if vars.contains_key(name)
             {
-                var = vars[var_split[0]].clone();
-            }
-
-            // Handle additional accessors.
-            if var_split.len() > 1
-            {
-                for accessor_index in 1..var_split.len()
-                {
-                    if let Token::Collection(collection) = &var
-                    {
-                        if let Ok(result) = var_split[accessor_index].parse::<usize>()
-                        {
-                            if result < collection.len()
-                            {
-                                var = collection[result].clone();
-                            }
-                            else
-                            {
-                                //TODO: Throw error that accessor is too large for the collection.
-                                var = Token::Null;
-                            }
-                        }
-                        else
-                        {
-                            //TODO: Throw error that accessor is not a number.
-                            var = Token::Null;
-                        }
-                    }
-                    else
-                    {
-                        //TODO: Throw error that variable is not of type collection.
-                        var = Token::Null;
-                    }
-                }
+                var = vars[name].clone();
             }
 
             return Some(var);
@@ -145,11 +111,35 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
             }
 
             return Some(Token::Collection(new_items));
+        },
+        Token::Accessor(accessor, prev_token) =>
+        {
+            match handle_token_type(runner, prev_token, vars)
+            {
+                Some(Token::Collection(collection)) =>
+                {
+                    if let Token::Int(i) = **accessor
+                    {
+                        let token = &collection[i as usize];
+                        if let Some(result) = handle_token_type(runner, token, vars)
+                        {
+                            return Some(result);
+                        }
+                        else
+                        {
+                            return Some(token.clone());
+                        }
+                    }
+                    else
+                    {
+                        return None;
+                    }
+                },
+                _ => None
+            }
         }
-        _ => { }
+        _ => None
     }
-
-    None
 }
 
 // Handles the various operations and conversions.

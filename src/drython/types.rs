@@ -50,6 +50,8 @@ pub enum Token
     Call(String, String),
     Operation(Vec<Token>),
     Operator(String),
+    // Accessor stores the accessor after the '.', and the token before.
+    Accessor(Box<Token>, Box<Token>),
 
     // Internal use only.
     // Allows an inner scope to break a loop.

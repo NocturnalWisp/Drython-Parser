@@ -19,7 +19,8 @@ enum ParseTokenType
     Operator,
     Parenth,
     //Function Call
-    Call
+    Call,
+    Accessor
 }
 
 // Hybrid polish notation/ast tree. Internal operations (Expressed in parentheses)
@@ -37,16 +38,20 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
     let mut tokens: Vec<Token> = Vec::new();
     let tokens_ptr = &mut tokens;
 
+    // Holds the token attached to an accessor.
+    let mut current_accessor_token = Token::Null;
+
     // Resurive check for parentheses
     for (i, c) in string.chars().enumerate()
     {
         let current_char_type =
         {
-            if c.is_alphanumeric() || c == '.' { ParseTokenType::Value }
+            if c.is_alphanumeric() { ParseTokenType::Value }
             else if c == '\'' || c == '"' { ParseTokenType::StringLiteral }
             else if utility::operations_contains(c) { ParseTokenType::Operator }
             else if c == '(' || c == ')' { ParseTokenType::Parenth }
             else if c == '[' || c == ']' { ParseTokenType::Collection }
+            else if c == '.' { ParseTokenType::Accessor }
             else { ParseTokenType::None }
         };
 
@@ -73,6 +78,18 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                     (ParseTokenType::StringLiteral, ParseTokenType::StringLiteral) => false,
                     (ParseTokenType::Parenth, ParseTokenType::Parenth) => false,
                     (ParseTokenType::Collection, ParseTokenType::Collection) => false,
+
+                    (ParseTokenType::Value, ParseTokenType::Accessor) => false,
+                    (ParseTokenType::StringLiteral, ParseTokenType::Accessor) => false,
+                    (ParseTokenType::Call, ParseTokenType::Accessor) => false,
+                    (ParseTokenType::Collection, ParseTokenType::Accessor) => false,
+
+                    (ParseTokenType::Accessor, ParseTokenType::Accessor) => false,
+                    (ParseTokenType::Accessor, ParseTokenType::Call) => false,
+                    (ParseTokenType::Accessor, ParseTokenType::Collection) => false,
+                    (ParseTokenType::Accessor, ParseTokenType::Parenth) => false,
+                    (ParseTokenType::Accessor, ParseTokenType::Operator) => false,
+
                     _ => true
                 };
 
@@ -82,10 +99,15 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                     continue;
                 }
             }
+            else
+            {
+                ()
+            }
             // The following else ifs' handle the last token value base on what kind of change happened.
 
             // Finish off value or string literal.
             let is_literal = last_token_type == ParseTokenType::StringLiteral;
+            let used_accessor = current_char_type == ParseTokenType::Accessor;
 
             if (last_token_type == ParseTokenType::Value && current_char_type != ParseTokenType::Value) ||
                is_literal
@@ -100,12 +122,24 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                 // Otherwise it's just a value.
                 else
                 {
-                    tokens_ptr.push(parse_token_value(&string[token_start..token_end], is_literal));
+                    let token = parse_token_value(&string[token_start..token_end], is_literal);
+                    if used_accessor
+                    {
+                        current_accessor_token = token;
+                        
+                        last_token_type = ParseTokenType::Accessor;
+                        token_start = i+1;
+                        token_end = i+1;
+                    }
+                    else
+                    {
+                        tokens_ptr.push(token);
 
-                    last_token_type = ParseTokenType::None;
-                    token_start = i;
+                        last_token_type = ParseTokenType::None;
+                        token_start = i;
+                    }
 
-                    if is_literal
+                    if is_literal || used_accessor
                     {
                         continue;
                     }
@@ -150,11 +184,23 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                                     _ => Token::Operation(operation)
                                 }
                             }).collect::<Vec<Token>>();
-
-                        tokens_ptr.push(Token::Collection(collection_operations));
-
-                        last_token_type = ParseTokenType::None;
-                        token_start = i;
+                        
+                        let token = Token::Collection(collection_operations);
+                        if used_accessor
+                        {
+                            current_accessor_token = token;
+                            
+                            last_token_type = ParseTokenType::Accessor;
+                            token_start = i+1;
+                            token_end = i+1;
+                        }
+                        else
+                        {
+                            tokens_ptr.push(token);
+    
+                            last_token_type = ParseTokenType::None;
+                            token_start = i;
+                        }
 
                         continue;
                     }
@@ -176,7 +222,9 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                 {
                     if inner_parenth_count == 0
                     {
-                        tokens_ptr.push(Token::Operation(parse_operation(&string[token_start..token_end], warning_list)));
+                        let token = Token::Operation(parse_operation(&string[token_start..token_end], warning_list));
+                        
+                        tokens_ptr.push(token);
 
                         last_token_type = ParseTokenType::None;
                         token_start = i;
@@ -203,16 +251,56 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
 
                         if let Some(result) = call.split_once("(")
                         {
-                            tokens_ptr.push(Token::Call(result.0.to_string(), result.1[..result.1.len()].to_string()));
+                            let token = Token::Call(result.0.to_string(), result.1[..result.1.len()].to_string());
+                            if used_accessor
+                            {
+                                current_accessor_token = token;
+                                
+                                last_token_type = ParseTokenType::Accessor;
+                                token_start = i+1;
+                                token_end = i+1;
+                            }
+                            else
+                            {
+                                tokens_ptr.push(token);
+        
+                                last_token_type = ParseTokenType::None;
+                                token_start = i;
+                            }
                         }
-
-                        last_token_type = ParseTokenType::None;
-                        token_start = i;
                     }
                     else
                     {
                         inner_parenth_count -= 1;
                     }
+                }
+            }
+            else if last_token_type == ParseTokenType::Accessor
+            {
+                // Load accessor with previously grabbed token into the tokens_ptr.
+                if i == string.len()-1
+                {
+                    token_end += 1;
+                }
+
+                let token = Token::Accessor(Box::new(parse_token_value(&string[token_start..token_end], is_literal)), Box::new(current_accessor_token.clone()));
+
+                if current_char_type == ParseTokenType::Accessor
+                {
+                    // Continue to be an accessor, just recursive with the last accessor.
+                    current_accessor_token = token;
+                    token_start = i+1;
+                    token_end = i+1;
+
+                    continue;
+                }
+                else
+                {
+                    tokens_ptr.push(token);
+                    current_accessor_token = Token::Null;
+    
+                    last_token_type = ParseTokenType::None;
+                    token_start = i;
                 }
             }
         }
@@ -226,7 +314,9 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                 // This might be the last value.
                 if i == string.len()-1
                 {
-                    tokens_ptr.push(parse_token_value(&string[token_start..i+1], false));
+                    let token= parse_token_value(&string[token_start..i+1], false);
+
+                    tokens_ptr.push(token);
                 }
 
                 token_start = i;
