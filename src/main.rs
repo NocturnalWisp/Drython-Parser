@@ -21,7 +21,10 @@ fn main()
 
             runner.regiser_external_function("print", |args| -> Option<drython::types::Token>
             {
-                println!("{:?}", args[0]);
+                if args.len() > 0
+                {
+                    println!("{:?}", args[0]);
+                }
                 None
             });
 

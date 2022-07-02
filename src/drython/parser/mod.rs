@@ -38,8 +38,6 @@ impl Parser
 
         let lines: Vec<String> = 
             Parser::handle_content_replace(&contents);
-        
-        println!("{:?}", lines);
 
         // Determining Script Type.
         let first_line = &lines[0][2..].trim_end_matches(";");

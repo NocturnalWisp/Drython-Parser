@@ -102,7 +102,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                     {
                         let operation = operation_parser::parse_operation(statement, warning_list);
 
-                        multi_ops.insert(operation_index, ("return".to_string(), vec![operation]));
+                        single_op.insert(operation_index, ("return".to_string(), operation));
                         operation_index += 1;
                     }
                     Err(error) => {warning_list.insert(line_start+i, error);}
@@ -177,7 +177,7 @@ fn parse_call(call: &str) -> Result<(String, Vec<String>), String>
     {
         function = first.0.to_string();
         
-        arguments = utility::split_by_comma(first.1.trim_end_matches(")"));
+        arguments = utility::split_by_comma(&first.1[0..first.1.len()-1]);
     }
     else
     {
