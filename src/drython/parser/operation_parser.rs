@@ -58,7 +58,6 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
             {
                 // Enum values not present in match are skipped.
                 // Follow the "a encounters b" pattern.
-                // Last token type may remain starting on "token_start".
                 let skip_current = match (&last_token_type, &current_char_type)
                 {
                     (ParseTokenType::Value, ParseTokenType::StringLiteral) => false,

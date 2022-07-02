@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use linked_hash_map::LinkedHashMap;
 
-use crate::drython::{types::{Token, Runner}, parser::operation_parser};
+use crate::drython::{types::{Token, Runner}, parser::operation_parser, utility};
 
 // recursive function that runs the operation from the reverse polish notation.
 pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
@@ -67,9 +67,9 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
             // Parse arguments and run them recursively.
             let mut parsed_args: Vec<Token> = Vec::new();
 
-            for arg in args.split(",")
+            for arg in utility::split_by_comma(args)
             {
-                if let Some(ran_token) = run_operation(runner, &operation_parser::parse_operation(arg, &mut LinkedHashMap::new()), vars)
+                if let Some(ran_token) = run_operation(runner, &operation_parser::parse_operation(&arg, &mut LinkedHashMap::new()), vars)
                 {
                     parsed_args.push(ran_token);
                 }
@@ -84,10 +84,49 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
         },
         Token::Var(name) =>
         {
-            if vars.contains_key(name)
+            // Deal with any accessors.
+            let var_split = name.split('.').collect::<Vec<&str>>();
+            let mut var: Token = Token::Null;
+
+            if vars.contains_key(var_split[0])
             {
-                return Some(vars[name].clone());
+                var = vars[var_split[0]].clone();
             }
+
+            // Handle additional accessors.
+            if var_split.len() > 1
+            {
+                for accessor_index in 1..var_split.len()
+                {
+                    if let Token::Collection(collection) = &var
+                    {
+                        if let Ok(result) = var_split[accessor_index].parse::<usize>()
+                        {
+                            if result < collection.len()
+                            {
+                                var = collection[result].clone();
+                            }
+                            else
+                            {
+                                //TODO: Throw error that accessor is too large for the collection.
+                                var = Token::Null;
+                            }
+                        }
+                        else
+                        {
+                            //TODO: Throw error that accessor is not a number.
+                            var = Token::Null;
+                        }
+                    }
+                    else
+                    {
+                        //TODO: Throw error that variable is not of type collection.
+                        var = Token::Null;
+                    }
+                }
+            }
+
+            return Some(var);
         },
         Token::Collection(items) =>
         {
