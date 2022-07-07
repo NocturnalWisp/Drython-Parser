@@ -10,13 +10,19 @@ pub fn get_expression_type(string: &str) -> ExpressionType
         _ => ()
     };
 
+    // Comments
+    if string.starts_with("//") || string.starts_with("#")
+    {
+        return ExpressionType::None;
+    }
+
     for c in string.chars()
     {
         if !started_call_or_function
         {
             match c
             {
-                c if c.is_alphanumeric() => buffer.push(c),
+                c if c.is_alphanumeric() || c == '.' => buffer.push(c),
                 '=' => return ExpressionType::Assignment,
                 '(' => started_call_or_function = true,
                 _ => () //Invalid char.
@@ -85,7 +91,7 @@ pub fn expression_is_scope(string: &str) -> bool
 
 // Allows for splitting operations by comma.
 // Avoids internal calls and scopes.
-pub fn split_by_comma(string: &str) -> Vec<String>
+pub fn split_by(string: &str, split: char) -> Vec<String>
 {
     let mut result: Vec<String> = Vec::new();
 
@@ -94,7 +100,7 @@ pub fn split_by_comma(string: &str) -> Vec<String>
 
     for (i, c) in string.chars().enumerate()
     {
-        if (c == ',' && in_count == 0) || i == string.len()-1
+        if (c == split && in_count == 0) || i == string.len()-1
         {
             let end = if i != string.len() - 1 {i} else {i+1};
             result.push(string[prev_start..end].to_string());

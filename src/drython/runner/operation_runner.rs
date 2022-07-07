@@ -67,7 +67,7 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
             // Parse arguments and run them recursively.
             let mut parsed_args: Vec<Token> = Vec::new();
 
-            for arg in utility::split_by_comma(args)
+            for arg in utility::split_by(args, ',')
             {
                 if let Some(ran_token) = run_operation(runner, &operation_parser::parse_operation(&arg, &mut LinkedHashMap::new()), vars)
                 {

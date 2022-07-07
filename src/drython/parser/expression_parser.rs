@@ -87,6 +87,11 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
         }
         else
         {
+            if expression_type == ExpressionType::None
+            {
+                continue;
+            }
+            
             // Scope change (if/loop).
             if utility::expression_is_scope(exp)
             {
@@ -137,6 +142,11 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                             operations.push(operation_parser::parse_operation(&statement, warning_list));
                         }
 
+                        for accessor in utility::split_by(&result.0, '.')
+                        {
+                            // If there is an accessor, try to access result from variable.
+                        }
+
                         multi_ops.insert(operation_index, (result.0, operations));
                         operation_index += 1;
                     },
@@ -177,7 +187,7 @@ fn parse_call(call: &str) -> Result<(String, Vec<String>), String>
     {
         function = first.0.to_string();
         
-        arguments = utility::split_by_comma(&first.1[0..first.1.len()-1]);
+        arguments = utility::split_by(&first.1[0..first.1.len()-1], ',');
     }
     else
     {

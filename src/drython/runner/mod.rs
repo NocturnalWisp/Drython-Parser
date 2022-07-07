@@ -87,7 +87,7 @@ impl Runner
             let mut arg_vars: HashMap<String, Token> = HashMap::new();
             if let Some(expected_args) = &function.1.scope_info.1
             {
-                let mut parsed_arg_names: Vec<String> = utility::split_by_comma(expected_args);
+                let mut parsed_arg_names: Vec<String> = utility::split_by(expected_args, ',');
 
                 for i in 0..parsed_arg_names.len()
                 {

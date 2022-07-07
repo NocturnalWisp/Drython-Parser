@@ -172,7 +172,7 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                 {
                     if inner_collection_count == 0
                     {
-                        let collection_operations = utility::split_by_comma(&string[token_start..token_end]).iter()
+                        let collection_operations = utility::split_by(&string[token_start..token_end], ',').iter()
                             // Use map to make sure multi-operations are kept in a Token::Operation.
                             .map(|x| {
                                 let operation = parse_operation(x, warning_list);

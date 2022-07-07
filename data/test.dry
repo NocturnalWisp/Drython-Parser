@@ -1,5 +1,5 @@
 System
 
 blagh():
-    b = monkey.eat(banana, asparagus)
+    // monkey.eat(banana, asparagus)
 end
