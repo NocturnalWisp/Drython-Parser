@@ -80,14 +80,15 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                     (ParseTokenType::Call, ParseTokenType::Parenth) => false,
                     (ParseTokenType::Collection, ParseTokenType::Collection) => false,
 
+                    (ParseTokenType::Value, ParseTokenType::Accessor) => false,
                     (ParseTokenType::StringLiteral, ParseTokenType::Accessor) => false,
                     (ParseTokenType::Collection, ParseTokenType::Accessor) => false,
 
                     (ParseTokenType::Accessor, ParseTokenType::Accessor) => false,
-                    (ParseTokenType::Accessor, ParseTokenType::Call) => false,
                     (ParseTokenType::Accessor, ParseTokenType::Collection) => false,
-                    (ParseTokenType::Accessor, ParseTokenType::Parenth) => false,
                     (ParseTokenType::Accessor, ParseTokenType::Operator) => false,
+                    (ParseTokenType::Accessor, ParseTokenType::Value) => false,
+                    (ParseTokenType::Accessor, ParseTokenType::Parenth) => false,
 
                     _ => true
                 };
@@ -251,7 +252,15 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
 
                         if let Some(result) = call.split_once("(")
                         {
-                            let token = Token::Call(result.0.to_string(), result.1[..result.1.len()].to_string());
+                            let mut token = Token::Call(result.0.to_string(), result.1[..result.1.len()].to_string());
+
+                            // Handle accessor.
+                            match &current_accessor_token
+                            {
+                                Token::Null => (),
+                                _ => { token = Token::Accessor(Box::new(current_accessor_token.clone()), Box::new(token)); }
+                            }
+
                             // Check if using an accessor after this call.
                             if string.len() >= i+2 && &string[i+1..i+2] == "."
                             {
@@ -297,6 +306,15 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                     token_end = i+1;
 
                     continue;
+                }
+                // Just continue through when the current is just another value.
+                else if current_char_type == ParseTokenType::Value
+                {
+                    token_end = i+1;
+                }
+                else if current_char_type == ParseTokenType::Parenth
+                {
+                    last_token_type = ParseTokenType::Call;
                 }
                 else
                 {

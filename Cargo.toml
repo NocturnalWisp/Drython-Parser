@@ -7,4 +7,4 @@ edition = "2018"
 
 [dependencies]
 linked-hash-map = "0.5.4"
-chain-map = "0.1.0"
+impl_ops = "0.1.0"

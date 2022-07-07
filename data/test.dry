@@ -1,9 +1,5 @@
 System
 
-get_collection():
-    return [2005]
-end
-
-callme():
-    print([200005, 25345.2356346].1)
+blagh():
+    b = monkey.eat(banana, asparagus)
 end
