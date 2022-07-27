@@ -60,6 +60,9 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
 
 fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Token>) -> Option<Token>
 {
+    // Stores a string buffer of an accessors string.
+    let mut accessor_string = String::new();
+
     match token
     {
         Token::Call(name, args) =>
@@ -90,6 +93,10 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
             if vars.contains_key(name)
             {
                 var = vars[name].clone();
+            }
+            else
+            {
+                var = Token::String(name.clone());
             }
 
             return Some(var);
@@ -135,11 +142,31 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                         return None;
                     }
                 },
-                _ => None
+                Some(Token::Var(value)) =>
+                {
+                    accessor_string.push_str(&value);
+                }
+                Some(Token::Accessor(second_accessor, second_prev)) =>
+                {
+                    match (handle_token_type(runner, &second_accessor, vars), handle_token_type(runner, &second_prev, vars))
+                    {
+                        (Some(Token::String(next_var)), Some(Token::String(prev_var))) =>
+                        {
+                            accessor_string.push_str(string);
+                        }
+                        (a, b) => { return b; }
+                    }
+                },
+                _ => { return None; }
             }
+
+            // Handle call.
+
         }
-        _ => None
+        _ => { return None; }
     }
+
+    None
 }
 
 // Handles the various operations and conversions.

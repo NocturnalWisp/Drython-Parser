@@ -19,6 +19,7 @@ pub struct ExpressionList
     // Function call
     pub multi_ops: HashMap<usize, (String, Vec<Vec<Token>>)>,
     pub internal_expressions: HashMap<usize, ExpressionList>,
+    pub includes: Vec<String>
 }
 
 impl ExpressionList
@@ -31,7 +32,8 @@ impl ExpressionList
             size: 0,
             single_op: HashMap::new(),
             multi_ops: HashMap::new(),
-            internal_expressions: HashMap::new()
+            internal_expressions: HashMap::new(),
+            includes: Vec::new()
         }
     }
 }

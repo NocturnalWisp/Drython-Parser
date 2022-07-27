@@ -41,32 +41,22 @@ impl PartialEq<Token> for IsToken
     }
 }
 
-pub fn get_libs(libs: Vec<&str>) -> Vec<(String, fn(Vec<Token>) -> Option<Token>)>
+pub fn get_lib(lib: &str) -> Vec<(String, fn(Vec<Token>) -> Option<Token>)>
 {
     let mut functions: Vec<(String, fn(Vec<Token>) -> Option<Token>)> = Vec::new();
 
-    // Don't register multiple of the same lib.
-    let mut registered: Vec<&str> = Vec::new();
-
-    for lib in libs
+    let found_lib: Option<Vec<(String, fn(Vec<Token>) -> Option<Token>)>> = match lib
     {
-        if registered.contains(&lib) { continue; }
+        "vector" => Some(vector::register_functs()),
+        _ => None
+    };
 
-        let new_lib: Option<Vec<(String, fn(Vec<Token>) -> Option<Token>)>> = match lib
+    if let Some(result) = found_lib
+    {
+        for func in result
         {
-            "vector" => Some(vector::register_functs()),
-            _ => None
-        };
-
-        if let Some(result) = new_lib
-        {
-            for func in result
-            {
-                functions.push(func);
-            }
+            functions.push(func);
         }
-
-        registered.push(lib);
     }
 
     functions

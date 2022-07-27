@@ -1,5 +1,7 @@
 System
 
+include vector
+
 blagh():
-    // monkey.eat(banana, asparagus)
+    print(p.vector.magnitude([2.0, 2.0, 3.0]))
 end

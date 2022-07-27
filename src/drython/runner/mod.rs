@@ -9,7 +9,7 @@ use crate::Parser;
 
 use self::operation_runner::run_operation;
 
-use super::{types::{Runner, Token, ExpressionList}, parser::operation_parser::parse_operation, utility};
+use super::{types::{Runner, Token, ExpressionList}, parser::operation_parser::parse_operation, utility, external};
 
 impl Runner
 {
@@ -26,7 +26,16 @@ impl Runner
     
     pub fn run_setup(& mut self)
     {
-        //TODO: Support function calls outside any scopes.
+        // Include libs
+        for library in &self.parser.global_expressions.includes
+        {
+            let mut lib = external::get_lib(library);
+
+            while let Some(function) = lib.pop()
+            {
+                self.external_functions.insert(function.0, function.1);
+            }
+        }
 
         // Register all functions.
         for func in &self.parser.global_expressions.internal_expressions

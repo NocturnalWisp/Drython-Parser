@@ -44,10 +44,10 @@ pub fn get_expression_type(string: &str) -> ExpressionType
         {
             "loop" => return ExpressionType::Loop,
             "if" => return ExpressionType::If,
-            "elif" => return ExpressionType::Elif,
-            "elseif" => return ExpressionType::Elif,
+            "elif"|"elseif" => return ExpressionType::Elif,
             "else" => return ExpressionType::Else,
             "return" => return ExpressionType::Return,
+            "use"|"import"|"include"|"using" => return ExpressionType::Library,
             _ => ()
         }
     }
@@ -76,6 +76,7 @@ pub enum ExpressionType
     Loop,
     Break,
     Continue,
+    Library,
 }
 
 pub fn expression_is_scope(string: &str) -> bool

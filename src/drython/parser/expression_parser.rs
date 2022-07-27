@@ -4,7 +4,7 @@ mod scope_parser;
 use std::collections::HashMap;
 use linked_hash_map::LinkedHashMap;
 
-use crate::drython::types::Token;
+use crate::drython::{types::Token, external};
 
 use super::{utility::{self, ExpressionType}, operation_parser};
 use super::types::ExpressionList;
@@ -16,6 +16,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
     let mut single_op: HashMap<usize, (String, Vec<Token>)> = HashMap::new();
     let mut multi_ops: HashMap<usize, (String, Vec<Vec<Token>>)> = HashMap::new();
     let mut internal_expressions: HashMap<usize, ExpressionList> = HashMap::new();
+    let mut includes: Vec<String> = Vec::new();
 
     // For internal expressions lists.
     // Will be split out for parsing once the end is found.
@@ -86,12 +87,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
             }
         }
         else
-        {
-            if expression_type == ExpressionType::None
-            {
-                continue;
-            }
-            
+        {            
             // Scope change (if/loop).
             if utility::expression_is_scope(exp)
             {
@@ -164,6 +160,20 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                 single_op.insert(operation_index, ("continue".to_string(), vec![]));
                 operation_index += 1;
             }
+            // Importing external functions
+            else if expression_type == ExpressionType::Library
+            {
+                let library = exp.trim_start_matches(match exp
+                {
+                    _ if exp.starts_with("use") => "use",
+                    _ if exp.starts_with("using") => "using",
+                    _ if exp.starts_with("import") => "import",
+                    _ if exp.starts_with("include") => "include",
+                    _ => ""
+                });
+                
+                includes.push(library.to_string());
+            }
         }
     }
 
@@ -174,6 +184,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
         single_op,
         multi_ops,
         internal_expressions,
+        includes
     }
 }
 

@@ -258,7 +258,7 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                             match &current_accessor_token
                             {
                                 Token::Null => (),
-                                _ => { token = Token::Accessor(Box::new(current_accessor_token.clone()), Box::new(token)); }
+                                _ => { token = Token::Accessor(Box::new(token), Box::new(current_accessor_token.clone())); }
                             }
 
                             // Check if using an accessor after this call.
