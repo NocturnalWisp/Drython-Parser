@@ -119,49 +119,9 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
 
             return Some(Token::Collection(new_items));
         },
-        Token::Accessor(accessor, prev_token) =>
+        Token::Accessor(prev_token, accessor) =>
         {
-            match handle_token_type(runner, prev_token, vars)
-            {
-                Some(Token::Collection(collection)) =>
-                {
-                    if let Token::Int(i) = **accessor
-                    {
-                        let token = &collection[i as usize];
-                        if let Some(result) = handle_token_type(runner, token, vars)
-                        {
-                            return Some(result);
-                        }
-                        else
-                        {
-                            return Some(token.clone());
-                        }
-                    }
-                    else
-                    {
-                        return None;
-                    }
-                },
-                Some(Token::Var(value)) =>
-                {
-                    accessor_string.push_str(&value);
-                }
-                Some(Token::Accessor(second_accessor, second_prev)) =>
-                {
-                    match (handle_token_type(runner, &second_accessor, vars), handle_token_type(runner, &second_prev, vars))
-                    {
-                        (Some(Token::String(next_var)), Some(Token::String(prev_var))) =>
-                        {
-                            accessor_string.push_str(string);
-                        }
-                        (a, b) => { return b; }
-                    }
-                },
-                _ => { return None; }
-            }
-
-            // Handle call.
-
+            
         }
         _ => { return None; }
     }

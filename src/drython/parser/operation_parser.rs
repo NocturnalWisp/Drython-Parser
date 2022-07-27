@@ -8,7 +8,7 @@ use crate::drython::utility;
 
 // Used internally for parsing tokens from an operation.
 // (Without the values associated with Types::Token)
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 enum ParseTokenType
 {
     None,
@@ -258,13 +258,13 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                             match &current_accessor_token
                             {
                                 Token::Null => (),
-                                _ => { token = Token::Accessor(Box::new(token), Box::new(current_accessor_token.clone())); }
+                                _ => { token = handle_accessor(&current_accessor_token, Box::new(token)); }
                             }
 
                             // Check if using an accessor after this call.
                             if string.len() >= i+2 && &string[i+1..i+2] == "."
                             {
-                                current_accessor_token = token;
+                                current_accessor_token = token.clone();
                                 
                                 last_token_type = ParseTokenType::None;
                                 token_start = i+2;
@@ -296,8 +296,9 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                     was_last = true;
                 }
 
-                let token = Token::Accessor(Box::new(parse_token_value(&string[token_start..token_end], is_literal)), Box::new(current_accessor_token.clone()));
+                let token = handle_accessor(&current_accessor_token, Box::new(parse_token_value(&string[token_start..token_end], is_literal)));
 
+                println!("{:?}", current_char_type);
                 if current_char_type == ParseTokenType::Accessor
                 {
                     // Continue to be an accessor, just recursive with the last accessor.
@@ -341,8 +342,12 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                 // This might be the last value.
                 if i == string.len()-1
                 {
-                    let token= parse_token_value(&string[token_start..i+1], false);
+                    let mut token = parse_token_value(&string[token_start..i+1], false);
 
+                    if let Token::Accessor(_, _) = current_accessor_token
+                    {
+                        token = handle_accessor(&current_accessor_token, Box::new(token));
+                    }
                     tokens_ptr.push(token);
                 }
 
@@ -393,6 +398,18 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
     // Handle operation order and populating.
     handle_populating_operation(tokens)
     
+}
+
+fn handle_accessor(prev_token: &Token, new_token: Box<Token>) -> Token
+{
+    if let Token::Accessor(prev, accessor) = &*prev_token
+    {
+        Token::Accessor(prev.clone(), Box::new(handle_accessor(&*accessor, new_token)))
+    }
+    else
+    {
+        Token::Accessor(Box::new(prev_token.clone()), new_token)
+    }
 }
 
 // Allows for the conversion from string to different types.

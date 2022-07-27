@@ -3,5 +3,5 @@ System
 include vector
 
 blagh():
-    print(p.vector.magnitude([2.0, 2.0, 3.0]))
+    print(banana.p.vector.eat().garb)
 end
