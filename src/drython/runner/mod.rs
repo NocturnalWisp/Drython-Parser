@@ -31,9 +31,14 @@ impl Runner
         {
             let mut lib = external::get_lib(library);
 
-            while let Some(function) = lib.pop()
+            while let Some(function) = &lib.0.pop()
             {
-                self.external_functions.insert(function.0, function.1);
+                self.external_functions.insert(function.0.clone(), function.1);
+            }
+
+            while let Some(var) = &lib.1.pop()
+            {
+                self.vars.insert(var.0.clone(), var.1.clone());
             }
         }
 

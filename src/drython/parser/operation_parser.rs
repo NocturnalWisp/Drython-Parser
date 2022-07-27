@@ -298,7 +298,6 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
 
                 let token = handle_accessor(&current_accessor_token, Box::new(parse_token_value(&string[token_start..token_end], is_literal)));
 
-                println!("{:?}", current_char_type);
                 if current_char_type == ParseTokenType::Accessor
                 {
                     // Continue to be an accessor, just recursive with the last accessor.
@@ -344,7 +343,8 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                 {
                     let mut token = parse_token_value(&string[token_start..i+1], false);
 
-                    if let Token::Accessor(_, _) = current_accessor_token
+                    if let Token::Null = current_accessor_token {}
+                    else
                     {
                         token = handle_accessor(&current_accessor_token, Box::new(token));
                     }

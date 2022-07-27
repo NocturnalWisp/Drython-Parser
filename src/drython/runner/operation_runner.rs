@@ -60,9 +60,6 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
 
 fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Token>) -> Option<Token>
 {
-    // Stores a string buffer of an accessors string.
-    let mut accessor_string = String::new();
-
     match token
     {
         Token::Call(name, args) =>
@@ -78,7 +75,16 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                 }
             }
             
-            return runner.call_function(name, parsed_args);
+            let call_result = runner.call_function(name, parsed_args);
+            
+            if let None = call_result
+            {
+                return Some(token.clone());
+            }
+            else
+            {
+                return call_result;
+            }
         },
         Token::Operation(op) =>
         {
@@ -121,12 +127,51 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
         },
         Token::Accessor(prev_token, accessor) =>
         {
-            
+            let handled_accessor = handle_token_type(runner, accessor, vars);
+            match handle_token_type(runner, prev_token, vars)
+            {
+                Some(Token::Collection(collection)) =>
+                {
+                    match handled_accessor
+                    {
+                        Some(Token::Int(i)) =>
+                        {
+                            let token = &collection[i as usize];
+                            if let Some(result) = handle_token_type(runner, token, vars)
+                            {
+                                return Some(result);
+                            }
+                            else
+                            {
+                                return Some(token.clone());
+                            }
+                        }
+                        _ => { return None; }
+                    }
+                },
+                Some(Token::String(value)) =>
+                {
+                    match handled_accessor
+                    {
+                        Some(Token::String(accessor_str)) =>
+                        {
+                            return handle_token_type(runner, &Token::Var(format!("{}.{}", value, accessor_str.clone())), vars);
+                        }
+                        Some(Token::Call(function_name, args)) =>
+                        {
+                            return handle_token_type(runner, &Token::Call(format!("{}.{}", value, function_name), args), vars);
+                        }
+                        _ => { return None; }
+                    }
+                }
+                _ => { return None; }
+            }
+
+            // Handle call.
+
         }
         _ => { return None; }
     }
-
-    None
 }
 
 // Handles the various operations and conversions.

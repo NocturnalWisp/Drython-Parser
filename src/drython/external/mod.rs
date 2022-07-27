@@ -4,6 +4,7 @@ use super::types::Token;
 mod vector;
 
 // Allows for quick checking if a token is of a certain type.
+#[derive(Debug)]
 pub enum IsToken
 {
     IsNull,
@@ -27,39 +28,49 @@ impl PartialEq<Token> for IsToken
 {
     fn eq(&self, other: &Token) -> bool
     {
-        self == &match other
+        match (self, other)
         {
-            Token::Null => IsToken::IsNull,
-            Token::Int(_) => IsToken::IsInt,
-            Token::Float(_) => IsToken::IsFloat,
-            Token::Bool(_) => IsToken::IsBool,
-            Token::String(_) => IsToken::IsString,
-            Token::Collection(_) => IsToken::IsCollection,
-            
-            _ => IsToken::IsNone
+            (IsToken::IsNull, Token::Null) => true,
+            (IsToken::IsInt, Token::Int(_)) => true,
+            (IsToken::IsFloat, Token::Float(_)) => true,
+            (IsToken::IsBool, Token::Bool(_)) => true,
+            (IsToken::IsString, Token::String(_)) => true,
+            (IsToken::IsCollection, Token::Collection(_)) => true,
+            _ => false
+        }
+    }
+
+    fn ne(&self, other: &Token) -> bool
+    {
+        match (self, other)
+        {
+            (IsToken::IsNull, Token::Null) => false,
+            (IsToken::IsInt, Token::Int(_)) => false,
+            (IsToken::IsFloat, Token::Float(_)) => false,
+            (IsToken::IsBool, Token::Bool(_)) => false,
+            (IsToken::IsString, Token::String(_)) => false,
+            (IsToken::IsCollection, Token::Collection(_)) => false,
+            _ => false
         }
     }
 }
 
-pub fn get_lib(lib: &str) -> Vec<(String, fn(Vec<Token>) -> Option<Token>)>
+pub fn get_lib(lib: &str) -> (Vec<(String, fn(Vec<Token>) -> Option<Token>)>, Vec<(std::string::String, Token)>)
 {
     let mut functions: Vec<(String, fn(Vec<Token>) -> Option<Token>)> = Vec::new();
+    let mut vars: Vec<(std::string::String, Token)> = Vec::new();
 
-    let found_lib: Option<Vec<(String, fn(Vec<Token>) -> Option<Token>)>> = match lib
+    match lib
     {
-        "vector" => Some(vector::register_functs()),
-        _ => None
+        "vector" =>
+        {
+            functions.append(&mut vector::register_functs());
+            vars.append(&mut vector::register_vars());
+        },
+        _ => {}
     };
 
-    if let Some(result) = found_lib
-    {
-        for func in result
-        {
-            functions.push(func);
-        }
-    }
-
-    functions
+    (functions, vars)
 }
 
 // These functions allow for extracting and expecting a specific token
