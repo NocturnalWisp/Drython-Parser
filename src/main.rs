@@ -19,15 +19,6 @@ fn main()
 
             runner.run_setup();
 
-            runner.regiser_external_function("print", |args| -> Option<drython::types::Token>
-            {
-                if args.len() > 0
-                {
-                    println!("{:?}", args[0]);
-                }
-                None
-            });
-
             runner.call_function("callme", vec![]);
         },
         Result::Err(error) =>

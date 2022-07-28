@@ -9,7 +9,7 @@ pub fn register_functs() -> Vec<(std::string::String, fn(Vec<Token>) -> Option<T
 {
     let mut functions: Vec<(std::string::String, fn(Vec<Token>) -> Option<Token>)> = Vec::new();
 
-    functions.push(("sqrt".to_string(), sqrt));
+    functions.push(("print".to_string(), print));
 
     functions
 }
@@ -22,18 +22,18 @@ pub fn register_vars() -> Vec<(std::string::String, Token)>
     vars
 }
 
-fn sqrt(args: Vec<Token>) -> Option<Token>
+fn print(args: Vec<Token>) -> Option<Token>
 {
-    if !expect(&args, vec![IsFloat]) || !expect(&args, vec![IsInt]) { return None; }
+    if args.len() != 1 { return None; }
     
-    if let Token::Float(f) = args[0]
+    match &args[0]
     {
-        return Some(Token::Float(f.sqrt()));
-    }
-    else if let Token::Int(i) = args[0]
-    {
-        return Some(Token::Float((i as f32).sqrt()));
+        Token::Int(i) => println!("{}", i),
+        Token::Float(f) => println!("{}", f),
+        Token::String(s) => println!("{}", s),
+        Token::Collection(c) => println!("{:?}", c),
+        _ => ()
     }
 
-    None
+    return Some(Token::Error(format!("Cannot print a variable of this type: {:?}", args[0])));
 }

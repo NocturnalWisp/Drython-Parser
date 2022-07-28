@@ -54,6 +54,8 @@ pub enum Token
     Operator(String),
     // Accessor stores the accessor after the '.', and the token before.
     Accessor(Box<Token>, Box<Token>),
+    // Used by external functions to throw errors back to the runner.
+    Error(String),
 
     // Internal use only.
     // Allows an inner scope to break a loop.

@@ -2,6 +2,8 @@ use std::{collections::HashMap, mem::{Discriminant, discriminant}};
 use super::types::Token;
 
 mod vector;
+mod misc;
+mod math;
 
 // Allows for quick checking if a token is of a certain type.
 #[derive(Debug)]
@@ -60,15 +62,19 @@ pub fn get_lib(lib: &str) -> (Vec<(String, fn(Vec<Token>) -> Option<Token>)>, Ve
     let mut functions: Vec<(String, fn(Vec<Token>) -> Option<Token>)> = Vec::new();
     let mut vars: Vec<(std::string::String, Token)> = Vec::new();
 
-    match lib
+    let result_option = match lib
     {
-        "vector" =>
-        {
-            functions.append(&mut vector::register_functs());
-            vars.append(&mut vector::register_vars());
-        },
-        _ => {}
+        "vector" => Some((vector::register_functs(), vector::register_vars())),
+        "misc" => Some((misc::register_functs(), misc::register_vars())),
+        "math" => Some((math::register_functs(), math::register_vars())),
+        _ => None
     };
+
+    if let Some(mut result) = result_option
+    {
+        functions.append(&mut result.0);
+        vars.append(&mut result.1);
+    }
 
     (functions, vars)
 }

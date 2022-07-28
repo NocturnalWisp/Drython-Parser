@@ -1,7 +1,8 @@
 System
 
-include vector
+include math
+include misc
 
 callme():
-    print(vector3.one)
+    print(sqrt(6))
 end
