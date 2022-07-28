@@ -11,6 +11,8 @@ use self::operation_runner::run_operation;
 
 use super::{types::{Runner, Token, ExpressionList}, parser::operation_parser::parse_operation, utility, external};
 
+use super::external::auto;
+
 impl Runner
 {
     pub fn new(parser: Parser) -> Runner
@@ -26,6 +28,19 @@ impl Runner
     
     pub fn run_setup(& mut self)
     {
+        // Include base external functions and vars.
+        let mut auto_lib = (auto::register_functs(), auto::register_vars());
+
+        while let Some(function) = &auto_lib.0.pop()
+        {
+            self.external_functions.insert(function.0.clone(), function.1);
+        }
+
+        while let Some(var) = &auto_lib.1.pop()
+        {
+            self.vars.insert(var.0.clone(), var.1.clone());
+        }
+
         // Include libs
         for library in &self.parser.global_expressions.includes
         {

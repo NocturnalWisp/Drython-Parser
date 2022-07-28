@@ -1,7 +1,6 @@
 System
 
 include math
-include misc
 
 callme():
     print(sqrt(6))
