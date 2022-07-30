@@ -25,7 +25,7 @@ pub fn register_vars() -> Vec<(std::string::String, Token)>
 
 fn magnitude(args: Vec<Token>) -> Option<Token>
 {
-    if !expect(&args, vec![IsCollection]) { return None; }
+    // if !expect(&args, vec![IsCollection]) { return None; }
     if !expect_collection(&args[0], vec![IsFloat, IsFloat, IsFloat]) {return None; }
     
 

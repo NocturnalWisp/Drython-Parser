@@ -24,7 +24,7 @@ pub fn register_vars() -> Vec<(std::string::String, Token)>
 
 fn sqrt(args: Vec<Token>) -> Option<Token>
 {
-    if !expect(&args, vec![IsFloat]) || !expect(&args, vec![IsInt]) { return None; }
+    if !expect(&args, &[&[IsFloat, IsInt]]) { return None; }
     
     if let Token::Float(f) = args[0]
     {

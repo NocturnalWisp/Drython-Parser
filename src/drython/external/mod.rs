@@ -82,7 +82,7 @@ pub fn get_lib(lib: &str) -> (Vec<(String, fn(Vec<Token>) -> Option<Token>)>, Ve
 // from the passed token arguments.
 
 // Returns true if the discriminents match the arguments.
-pub fn expect(args: &Vec<Token>, token_checks: Vec<IsToken>) -> bool
+pub fn expect(args: &[Token], token_checks: &[&[IsToken]]) -> bool
 {
     if args.len() != token_checks.len()
     {
@@ -91,7 +91,16 @@ pub fn expect(args: &Vec<Token>, token_checks: Vec<IsToken>) -> bool
     
     for (i, check) in token_checks.iter().enumerate()
     {
-        if check != &args[i]
+        let mut has_token_type = false;
+        for token in check.iter()
+        {
+            if token == &args[i]
+            {
+                has_token_type = true;
+            }
+        }
+
+        if !has_token_type 
         {
             return false;
         }

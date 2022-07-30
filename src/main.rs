@@ -20,6 +20,8 @@ fn main()
             runner.run_setup();
 
             runner.call_function("callme", vec![]);
+
+            println!("{:?}", parse_warnings);
         },
         Result::Err(error) =>
         {

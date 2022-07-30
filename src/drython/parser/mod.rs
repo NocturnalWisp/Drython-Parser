@@ -48,8 +48,6 @@ impl Parser
             return Err(format!("Unexpected script type: {}", first_line));
         }
 
-        //TODO: Parse includes
-
         // Parse global expressions.
         let global_expressions = parse_expressions(&lines, 0, warning_list);
 
