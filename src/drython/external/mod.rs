@@ -1,4 +1,3 @@
-use std::{collections::HashMap, mem::{Discriminant, discriminant}};
 use super::types::Token;
 
 mod vector;
@@ -7,6 +6,7 @@ mod math;
 
 // Allows for quick checking if a token is of a certain type.
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum IsToken
 {
     IsNull,
@@ -136,4 +136,4 @@ pub fn expect_collection(arg: &Token, token_checks: Vec<IsToken>) -> bool
     return true;
 }
 
-pub fn auto_attach()
+// pub fn auto_attach()

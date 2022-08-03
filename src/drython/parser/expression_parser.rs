@@ -4,7 +4,7 @@ mod scope_parser;
 use std::collections::HashMap;
 use linked_hash_map::LinkedHashMap;
 
-use crate::drython::{types::Token, external};
+use crate::drython::types::Token;
 
 use super::{utility::{self, ExpressionType}, operation_parser};
 use super::types::ExpressionList;
@@ -136,11 +136,6 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                         for statement in result.1
                         {
                             operations.push(operation_parser::parse_operation(&statement, warning_list));
-                        }
-
-                        for accessor in utility::split_by(&result.0, '.')
-                        {
-                            // If there is an accessor, try to access result from variable.
                         }
 
                         multi_ops.insert(operation_index, (result.0, operations));

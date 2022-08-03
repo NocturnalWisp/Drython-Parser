@@ -94,7 +94,7 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
         Token::Var(name) =>
         {
             // Deal with any accessors.
-            let mut var: Token = Token::Null;
+            let var: Token;
 
             if vars.contains_key(name)
             {

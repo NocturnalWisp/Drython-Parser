@@ -1,9 +1,7 @@
-use std::mem::discriminant;
-
 use crate::drython::types::Token::{self, *};
 use super::IsToken::{*};
 
-use super::{expect, expect_collection};
+use super::expect_collection;
 
 pub fn register_functs() -> Vec<(std::string::String, fn(Vec<Token>) -> Option<Token>)>
 {
