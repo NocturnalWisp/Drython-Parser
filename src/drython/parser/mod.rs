@@ -37,7 +37,7 @@ impl Parser
         contents = contents.replace("\\\r\n", "");
 
         let lines: Vec<String> = 
-            Parser::handle_content_replace(&contents);
+            Parser::handle_content_replace(&contents, warning_list);
 
         // Determining Script Type.
         let first_line = &lines[0][2..].trim_end_matches(";");
@@ -49,17 +49,17 @@ impl Parser
         }
 
         // Parse global expressions.
-        let global_expressions = parse_expressions(&lines, 0, warning_list);
+        let global_expressions = parse_expressions(&lines[1..].to_vec(), 2, warning_list);
 
         Ok(Parser
         {
-            script_type: script_type,
+            script_type,
             global_expressions,
         })
     }
 
     // Parses the content by removing empty spaces and placing semi colons at the end of lines.
-    fn handle_content_replace(string: &str) -> Vec<String>
+    fn handle_content_replace(string: &str, warning_list: &mut LinkedHashMap<usize, String>) -> Vec<String>
     {
         let mut new_string: Vec<String> = Vec::new();
 
@@ -68,6 +68,7 @@ impl Parser
             // Remove all empty spaces except when in string literal.
             let mut new_line = String::new();
             let mut in_string_literal = false;
+
             for c in line.chars()
             {
                 // Start new line line after semi-colons.
@@ -91,6 +92,10 @@ impl Parser
                 }
             }
             //TOOO: Throw error if in string literal still because it means there is an extra quote somewhere.
+            if in_string_literal
+            {
+                warning_list.insert(index, "String literal was not closed.".to_string());
+            }
 
             new_string.push(format!("{}){}", index+1, new_line));
         }

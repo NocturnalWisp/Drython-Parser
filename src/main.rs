@@ -13,15 +13,17 @@ fn main()
     {
         Result::Ok(result) =>
         {
-            println!("{:#?}", result);
-
             let mut runner = Runner::new(result);
 
             runner.run_setup();
 
             runner.call_function("callme", vec![]);
 
-            println!("{:?}", parse_warnings);
+            if parse_warnings.len() > 0
+            {
+                println!("{} contained the following issues:", "data/test.dry");
+                println!("{:?}", parse_warnings);
+            }
         },
         Result::Err(error) =>
         {

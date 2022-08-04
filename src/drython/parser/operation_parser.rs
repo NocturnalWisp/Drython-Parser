@@ -23,9 +23,11 @@ enum ParseTokenType
     Accessor
 }
 
+use ParseTokenType as PTT;
+
 // Hybrid polish notation/ast tree. Internal operations (Expressed in parentheses)
 // are put into a recursive calculation.
-pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize, String>) -> Vec<Token>
+pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize, String>, line_number: usize) -> Vec<Token>
 {
     let mut last_token_type = ParseTokenType::None;
     let mut token_start: usize = 0;
@@ -65,30 +67,30 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                 // Follow the "a encounters b" pattern.
                 let skip_current = match (&last_token_type, &current_char_type)
                 {
-                    (ParseTokenType::Value, ParseTokenType::StringLiteral) => false,
-                    (ParseTokenType::Value, ParseTokenType::Collection) => false,
-                    (ParseTokenType::Value, ParseTokenType::Operator) => false,
-                    (ParseTokenType::Value, ParseTokenType::Parenth) => false,
+                    (PTT::Value, PTT::StringLiteral) => false,
+                    (PTT::Value, PTT::Collection) => false,
+                    (PTT::Value, PTT::Operator) => false,
+                    (PTT::Value, PTT::Parenth) => false,
 
-                    (ParseTokenType::Operator, ParseTokenType::Value) => false,
-                    (ParseTokenType::Operator, ParseTokenType::StringLiteral) => false,
-                    (ParseTokenType::Operator, ParseTokenType::Collection) => false,
-                    (ParseTokenType::Operator, ParseTokenType::Parenth) => false,
+                    (PTT::Operator, PTT::Value) => false,
+                    (PTT::Operator, PTT::StringLiteral) => false,
+                    (PTT::Operator, PTT::Collection) => false,
+                    (PTT::Operator, PTT::Parenth) => false,
                     
-                    (ParseTokenType::StringLiteral, ParseTokenType::StringLiteral) => false,
-                    (ParseTokenType::Parenth, ParseTokenType::Parenth) => false,
-                    (ParseTokenType::Call, ParseTokenType::Parenth) => false,
-                    (ParseTokenType::Collection, ParseTokenType::Collection) => false,
+                    (PTT::StringLiteral, PTT::StringLiteral) => false,
+                    (PTT::Parenth, PTT::Parenth) => false,
+                    (PTT::Call, PTT::Parenth) => false,
+                    (PTT::Collection, PTT::Collection) => false,
 
-                    (ParseTokenType::Value, ParseTokenType::Accessor) => false,
-                    (ParseTokenType::StringLiteral, ParseTokenType::Accessor) => false,
-                    (ParseTokenType::Collection, ParseTokenType::Accessor) => false,
+                    (PTT::Value, PTT::Accessor) => false,
+                    (PTT::StringLiteral, PTT::Accessor) => false,
+                    (PTT::Collection, PTT::Accessor) => false,
 
-                    (ParseTokenType::Accessor, ParseTokenType::Accessor) => false,
-                    (ParseTokenType::Accessor, ParseTokenType::Collection) => false,
-                    (ParseTokenType::Accessor, ParseTokenType::Operator) => false,
-                    (ParseTokenType::Accessor, ParseTokenType::Value) => false,
-                    (ParseTokenType::Accessor, ParseTokenType::Parenth) => false,
+                    (PTT::Accessor, PTT::Accessor) => false,
+                    (PTT::Accessor, PTT::Collection) => false,
+                    (PTT::Accessor, PTT::Operator) => false,
+                    (PTT::Accessor, PTT::Value) => false,
+                    (PTT::Accessor, PTT::Parenth) => false,
 
                     _ => true
                 };
@@ -98,10 +100,6 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                     token_end = i+1;
                     continue;
                 }
-            }
-            else
-            {
-                ()
             }
             // The following else ifs' handle the last token value base on what kind of change happened.
 
@@ -175,7 +173,7 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                         let collection_operations = utility::split_by(&string[token_start..token_end], ',').iter()
                             // Use map to make sure multi-operations are kept in a Token::Operation.
                             .map(|x| {
-                                let operation = parse_operation(x, warning_list);
+                                let operation = parse_operation(x, warning_list, line_number);
 
                                 match operation.len()
                                 {
@@ -223,7 +221,7 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                 {
                     if inner_parenth_count == 0
                     {
-                        let token = Token::Operation(parse_operation(&string[token_start..token_end], warning_list));
+                        let token = Token::Operation(parse_operation(&string[token_start..token_end], warning_list, line_number));
                         
                         tokens_ptr.push(token);
 

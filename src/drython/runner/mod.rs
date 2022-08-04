@@ -231,7 +231,7 @@ impl Runner
                                 if let Some(if_op) = &function.scope_info.1
                                 {
                                     // Only handle scope if the "if operation" is true.
-                                    let operation = parse_operation(if_op, &mut LinkedHashMap::new());
+                                    let operation = parse_operation(if_op, &mut LinkedHashMap::new(), 0);
 
                                     if let Some(Token::Bool(true)) = run_operation(self, &operation, &vars)
                                     {
@@ -252,7 +252,7 @@ impl Runner
                                     if let Some(if_op) = &function.scope_info.1
                                     {
                                         // Only handle scope if the "elif operation" is true.
-                                        let operation = parse_operation(if_op, &mut LinkedHashMap::new());
+                                        let operation = parse_operation(if_op, &mut LinkedHashMap::new(), 0);
 
                                         if let Some(Token::Bool(true)) = run_operation(self, &operation, &vars)
                                         {

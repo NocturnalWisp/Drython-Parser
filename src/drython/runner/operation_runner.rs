@@ -69,7 +69,7 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
 
             for arg in utility::split_by(args, ',')
             {
-                if let Some(ran_token) = run_operation(runner, &operation_parser::parse_operation(&arg, &mut LinkedHashMap::new()), vars)
+                if let Some(ran_token) = run_operation(runner, &operation_parser::parse_operation(&arg, &mut LinkedHashMap::new(), 0), vars)
                 {
                     parsed_args.push(ran_token);
                 }

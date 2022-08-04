@@ -101,7 +101,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                 {
                     Ok(statement) => 
                     {
-                        let operation = operation_parser::parse_operation(statement, warning_list);
+                        let operation = operation_parser::parse_operation(statement, warning_list, line_start+i);
 
                         single_op.insert(operation_index, ("return".to_string(), operation));
                         operation_index += 1;
@@ -116,12 +116,12 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                 {
                     Ok(result) => 
                     {
-                        let operation = operation_parser::parse_operation(&result.1, warning_list);
+                        let operation = operation_parser::parse_operation(&result.1, warning_list, line_start+i);
 
                         single_op.insert(operation_index, (result.0, operation));
                         operation_index += 1;
                     },
-                    Err(error) => {warning_list.insert(line_start+i, error);}
+                    Err(error) => {warning_list.insert(line_start, error);}
                 }
             }
             // Function call.
@@ -135,7 +135,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
 
                         for statement in result.1
                         {
-                            operations.push(operation_parser::parse_operation(&statement, warning_list));
+                            operations.push(operation_parser::parse_operation(&statement, warning_list, line_start+i));
                         }
 
                         multi_ops.insert(operation_index, (result.0, operations));
@@ -168,6 +168,10 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                 });
                 
                 includes.push(library.to_string());
+            }
+            else if expression_type == ExpressionType::None
+            {
+                warning_list.insert(line_start+i, "Could not parse the expression due to unrecognizable characters.".to_string());
             }
         }
     }

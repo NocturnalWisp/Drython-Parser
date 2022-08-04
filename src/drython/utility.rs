@@ -13,7 +13,7 @@ pub fn get_expression_type(string: &str) -> ExpressionType
     // Comments
     if string.starts_with("//") || string.starts_with("#")
     {
-        return ExpressionType::None;
+        return ExpressionType::Comment;
     }
 
     for c in string.chars()
@@ -25,7 +25,7 @@ pub fn get_expression_type(string: &str) -> ExpressionType
                 c if c.is_alphanumeric() || c == '.' => buffer.push(c),
                 '=' => return ExpressionType::Assignment,
                 '(' => started_call_or_function = true,
-                _ => () //Invalid char.
+                _ => return ExpressionType::None, //Invalid char.
             }
         }
         // Check for the end of a function creation.
@@ -77,6 +77,7 @@ pub enum ExpressionType
     Break,
     Continue,
     Library,
+    Comment,
 }
 
 pub fn expression_is_scope(string: &str) -> bool
