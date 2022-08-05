@@ -4,5 +4,4 @@ include math
 
 callme():
     print(sqrt(6))
-    %^&*
 end

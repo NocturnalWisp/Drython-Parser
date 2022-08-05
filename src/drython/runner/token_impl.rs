@@ -403,3 +403,51 @@ impl Token
         Token::Collection(collection.iter().map(|x| x.compare_lt(other_token).unwrap_or(Token::Null)).collect())
     }
 }
+
+impl PartialEq<i32> for Token
+{
+    fn eq(&self, other: &i32) -> bool
+    {
+        match self
+        {
+            Token::Int(_) => true,
+            _ => false
+        }
+    }
+}
+
+impl PartialEq<f32> for Token
+{
+    fn eq(&self, other: &f32) -> bool
+    {
+        match self
+        {
+            Token::Float(_) => true,
+            _ => false
+        }
+    }
+}
+
+impl PartialEq<bool> for Token
+{
+    fn eq(&self, other: &bool) -> bool
+    {
+        match self
+        {
+            Token::Bool(_) => true,
+            _ => false
+        }
+    }
+}
+
+impl PartialEq<String> for Token
+{
+    fn eq(&self, other: &String) -> bool
+    {
+        match self
+        {
+            Token::String(_) => true,
+            _ => false
+        }
+    }
+}

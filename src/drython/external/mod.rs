@@ -135,5 +135,3 @@ pub fn expect_collection(arg: &Token, token_checks: Vec<IsToken>) -> bool
 
     return true;
 }
-
-// pub fn auto_attach()
