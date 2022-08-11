@@ -82,7 +82,7 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                     (PTT::Call, PTT::Parenth) => false,
                     (PTT::Collection, PTT::Collection) => false,
 
-                    (PTT::Value, PTT::Accessor) => false,
+                    (PTT::Value, PTT::Accessor) => if string[token_start..token_end].chars().all(|c| c.is_numeric()) { true } else { false },
                     (PTT::StringLiteral, PTT::Accessor) => false,
                     (PTT::Collection, PTT::Accessor) => false,
 

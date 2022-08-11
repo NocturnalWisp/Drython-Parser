@@ -1,13 +1,13 @@
 use crate::drython::types::Token::{self, *};
 use super::IsToken::{*};
 
-use super::expect_collection;
+use super::{expect, FunctionCall, attach};
 
-pub fn register_functs() -> Vec<(std::string::String, fn(Vec<Token>) -> Option<Token>)>
+pub fn register_functs() -> Vec<(std::string::String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>)>
 {
-    let mut functions: Vec<(std::string::String, fn(Vec<Token>) -> Option<Token>)> = Vec::new();
+    let mut functions: Vec<(std::string::String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>)> = Vec::new();
 
-    functions.push(("vector.magnitude".to_string(), magnitude));
+    // functions.push(("vector.magnitude".to_string(), magnitude));
 
     functions
 }
@@ -21,11 +21,11 @@ pub fn register_vars() -> Vec<(std::string::String, Token)>
     vars
 }
 
-fn magnitude(args: Vec<Token>) -> Option<Token>
-{
-    // if !expect(&args, vec![IsCollection]) { return None; }
-    if !expect_collection(&args[0], vec![IsFloat, IsFloat, IsFloat]) {return None; }
+// fn magnitude(args: Vec<Token>) -> Option<Token>
+// {
+//     // if !expect(&args, vec![IsCollection]) { return None; }
+//     if !expect_collection(&args[0], vec![IsFloat, IsFloat, IsFloat]) {return None; }
     
 
-    None
-}
+//     None
+// }

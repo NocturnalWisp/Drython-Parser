@@ -1,4 +1,5 @@
 use crate::drython::types::Token;
+use std::convert::From;
 
 impl Token
 {
@@ -404,49 +405,81 @@ impl Token
     }
 }
 
-impl PartialEq<i32> for Token
+impl From<i32> for Token
 {
-    fn eq(&self, other: &i32) -> bool
+    fn from(value: i32) -> Self
     {
-        match self
+        Token::Int(value)
+    }
+}
+
+impl From<f32> for Token
+{
+    fn from(value: f32) -> Self
+    {
+        Token::Float(value)
+    }
+}
+
+impl From<bool> for Token
+{
+    fn from(value: bool) -> Self
+    {
+        Token::Bool(value)
+    }
+}
+
+impl From<String> for Token
+{
+    fn from(value: String) -> Self
+    {
+        Token::String(value)
+    }
+}
+
+impl From<Token> for i32
+{
+    fn from(value: Token) -> Self
+    {
+        match value
         {
-            Token::Int(_) => true,
-            _ => false
+            Token::Int(i) => i,
+            _ => 0
         }
     }
 }
 
-impl PartialEq<f32> for Token
+impl From<Token> for f32
 {
-    fn eq(&self, other: &f32) -> bool
+    fn from(value: Token) -> Self
     {
-        match self
+        match value
         {
-            Token::Float(_) => true,
-            _ => false
+            Token::Float(i) => i,
+            _ => 0.0
         }
     }
 }
 
-impl PartialEq<bool> for Token
+impl From<Token> for String
 {
-    fn eq(&self, other: &bool) -> bool
+    fn from(value: Token) -> Self
     {
-        match self
+        match value
         {
-            Token::Bool(_) => true,
-            _ => false
+            Token::String(i) => i,
+            _ => "".to_string()
         }
     }
 }
 
-impl PartialEq<String> for Token
+impl From<Token> for bool
 {
-    fn eq(&self, other: &String) -> bool
+    fn from(value: Token) -> Self
     {
-        match self
+        match value
         {
-            Token::String(_) => true,
+            Token::Bool(i) => i,
             _ => false
         }
     }

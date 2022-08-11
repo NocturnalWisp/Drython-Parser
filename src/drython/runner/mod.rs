@@ -31,12 +31,12 @@ impl Runner
         // Include base external functions and vars.
         let mut auto_lib = (auto::register_functs(), auto::register_vars());
 
-        while let Some(function) = &auto_lib.0.pop()
+        while let Some(function) = auto_lib.0.pop()
         {
             self.external_functions.insert(function.0.clone(), function.1);
         }
 
-        while let Some(var) = &auto_lib.1.pop()
+        while let Some(var) = auto_lib.1.pop()
         {
             self.vars.insert(var.0.clone(), var.1.clone());
         }
@@ -46,12 +46,12 @@ impl Runner
         {
             let mut lib = external::get_lib(library);
 
-            while let Some(function) = &lib.0.pop()
+            while let Some(function) = lib.0.pop()
             {
                 self.external_functions.insert(function.0.clone(), function.1);
             }
 
-            while let Some(var) = &lib.1.pop()
+            while let Some(var) = lib.1.pop()
             {
                 self.vars.insert(var.0.clone(), var.1.clone());
             }
@@ -89,7 +89,10 @@ impl Runner
 
         if self.external_functions.contains_key(function_name)
         {
-            return self.external_functions[function_name](args);
+            if let Some(call) = &self.external_functions[function_name]
+            {
+                return call(args);
+            }
         }
 
         None
@@ -319,6 +322,6 @@ impl Runner
     
     pub fn regiser_external_function(&mut self, function_name: &str, function: fn(Vec<Token>) -> Option<Token>)
     {
-        self.external_functions.insert(function_name.to_string(), function);
+        self.external_functions.insert(function_name.to_string(), Some(Box::new(function)));
     }
 }

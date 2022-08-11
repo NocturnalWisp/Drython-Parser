@@ -1,13 +1,14 @@
 use crate::drython::types::Token;
 use super::IsToken::{*};
 
-use super::expect;
+use super::{expect, FunctionCall, attach};
 
-pub fn register_functs() -> Vec<(std::string::String, fn(Vec<Token>) -> Option<Token>)>
+pub fn register_functs() -> Vec<(std::string::String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>)>
 {
-    let mut functions: Vec<(std::string::String, fn(Vec<Token>) -> Option<Token>)> = Vec::new();
+    let mut functions: Vec<(std::string::String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>)> = Vec::new();
 
-    functions.push(("sqrt".to_string(), sqrt));
+    // functions.push(("sqrt".to_string(), sqrt));
+    functions.push(("sqrt".to_string(), attach::<f32, f32, f32>(FunctionCall::a1r(f32::sqrt))));
 
     functions
 }

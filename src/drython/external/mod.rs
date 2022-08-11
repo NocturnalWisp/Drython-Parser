@@ -57,9 +57,9 @@ impl PartialEq<Token> for IsToken
     }
 }
 
-pub fn get_lib(lib: &str) -> (Vec<(String, fn(Vec<Token>) -> Option<Token>)>, Vec<(std::string::String, Token)>)
+pub fn get_lib(lib: &str) -> (Vec<(String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>)>, Vec<(std::string::String, Token)>)
 {
-    let mut functions: Vec<(String, fn(Vec<Token>) -> Option<Token>)> = Vec::new();
+    let mut functions: Vec<(String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>)> = Vec::new();
     let mut vars: Vec<(std::string::String, Token)> = Vec::new();
 
     let result_option = match lib
@@ -134,4 +134,71 @@ pub fn expect_collection(arg: &Token, token_checks: Vec<IsToken>) -> bool
     }
 
     return true;
+}
+
+pub enum FunctionCall<T, U, R>
+    where Token: From<R>
+{
+    a0(fn()),
+    a0r(fn()->R), 
+
+    a1(fn(T) -> R),
+    a1r(fn(T)->R),
+
+    a2(fn(T, U)),
+    a2r(fn(T, U)->R)
+}
+
+pub fn attach<T, U, R>(function_call: FunctionCall<T, U, R>) -> Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>
+    where
+        Token: From<T>,
+        T: 'static,
+        T: From<Token>,
+
+        Token: From<U>,
+        U: 'static,
+        U: From<Token>,
+        
+        Token: From<R>,
+        R: 'static
+{
+    match function_call
+    {
+        FunctionCall::a0(call) =>
+        {
+            return Some(Box::new(move |args| { call(); return None; }));
+        },
+        FunctionCall::a0r(call) =>
+        {
+            return Some(Box::new(move |args|
+                    {
+                        Some(Token::from(call()))
+                    }));
+        },
+        FunctionCall::a1(call) =>
+        {
+            return Some(Box::new(move |args| { call(T::from(args[0].clone())); return None; }));
+        },
+        FunctionCall::a1r(call) =>
+        {
+            return Some(Box::new(move |args|
+                    {
+
+                        println!("{:#?}", args);
+                        Some(Token::from(call(T::from(args[0].clone()))))
+                    }));
+        },
+        FunctionCall::a2(call) =>
+        {
+            return Some(Box::new(move |args| { call(T::from(args[0].clone()), U::from(args[1].clone())); return None; }));
+        },
+        FunctionCall::a2r(call) =>
+        {
+            return Some(Box::new(move |args|
+                    {
+                        Some(Token::from(call(T::from(args[0].clone()), U::from(args[1].clone()))))
+                    }));
+        },
+        _ => { None }
+    }
 }

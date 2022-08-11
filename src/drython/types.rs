@@ -73,6 +73,6 @@ pub struct Runner
 {
     pub parser: Parser,
     pub internal_functions: HashMap<String, fn(&Runner, &str, Vec<Token>) -> Option<Token>>,
-    pub external_functions: HashMap<String, fn(Vec<Token>) -> Option<Token>>,
+    pub external_functions: HashMap<String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>>,
     pub vars: HashMap<String, Token>
 }

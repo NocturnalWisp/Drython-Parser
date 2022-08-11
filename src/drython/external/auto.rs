@@ -1,10 +1,10 @@
 use crate::drython::types::Token;
 
-pub fn register_functs() -> Vec<(std::string::String, fn(Vec<Token>) -> Option<Token>)>
+pub fn register_functs() -> Vec<(std::string::String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>)>
 {
-    let mut functions: Vec<(std::string::String, fn(Vec<Token>) -> Option<Token>)> = Vec::new();
+    let mut functions: Vec<(std::string::String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>)> = Vec::new();
 
-    functions.push(("print".to_string(), print));
+    functions.push(("print".to_string(), Some(Box::new(print))));
 
     functions
 }

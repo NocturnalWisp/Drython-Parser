@@ -3,5 +3,5 @@ System
 include math
 
 callme():
-    print(sqrt(6))
+    print(sqrt(4.0))
 end
