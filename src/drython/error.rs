@@ -23,13 +23,15 @@ impl ErrorManager
 
 // Use as a function on the error manager. (Eg. error_manager.error!(ParseError::new(0, 0, "Error.")); )
 #[macro_export]
-macro_rules! error
+macro_rules! push_error
 {
-    ($error: expr) =>
+    ($manager: ident, $error: expr) =>
     {
-        .add_error(Box::new($error))
+        $manager.add_error(Box::new($error))
     }
 }
+
+pub (crate) use push_error;
 
 // For parser
 trait DrythonError
@@ -48,12 +50,12 @@ pub struct ParseError
 
 impl ParseError
 {
-    pub fn new(line_number: usize, char_number: usize, message: String) -> Self
+    pub fn new(line_number: usize, char_number: usize, message: &str) -> Self
     {
         ParseError
         {
             location: (line_number, char_number),
-            message
+            message: message.to_string()
         }
     }
 }
@@ -98,13 +100,13 @@ pub struct RuntimeError
 
 impl RuntimeError
 {
-    pub fn new(line_number: usize, function_name: Option<String>, message: String) -> Self
+    pub fn new(line_number: usize, function_name: Option<String>, message: &str) -> Self
     {
         RuntimeError
         {
             line_number,
             function_name,
-            message
+            message: message.to_string()
         }
     }
 }
