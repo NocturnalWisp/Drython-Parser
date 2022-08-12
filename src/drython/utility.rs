@@ -1,3 +1,4 @@
+
 pub fn get_expression_type(string: &str) -> ExpressionType
 {
     let mut buffer = String::new();

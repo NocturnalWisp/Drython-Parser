@@ -3,5 +3,5 @@ System
 include math
 
 callme():
-    print(sqrt(4.0))
+    print(divide2([4.0, 2.0, 2.0]))
 end

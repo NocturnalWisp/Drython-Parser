@@ -62,6 +62,10 @@ pub enum Token
     Break
 }
 
+pub type DynamicFunctionCall = Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>;
+pub type RegisteredFunction= (String, DynamicFunctionCall);
+pub type RegisteredVariable = (String, Token);
+
 #[derive(Debug)]
 pub struct Operation
 {

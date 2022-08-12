@@ -1,8 +1,9 @@
-use super::types::Token;
+use super::types::{Token, DynamicFunctionCall, RegisteredFunction, RegisteredVariable};
 
 mod vector;
 pub mod auto;
 mod math;
+
 
 // Allows for quick checking if a token is of a certain type.
 #[derive(Debug)]
@@ -57,9 +58,9 @@ impl PartialEq<Token> for IsToken
     }
 }
 
-pub fn get_lib(lib: &str) -> (Vec<(String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>)>, Vec<(std::string::String, Token)>)
+pub fn get_lib(lib: &str) -> (Vec<(String, DynamicFunctionCall)>, Vec<(std::string::String, Token)>)
 {
-    let mut functions: Vec<(String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>)> = Vec::new();
+    let mut functions: Vec<(String, DynamicFunctionCall)> = Vec::new();
     let mut vars: Vec<(std::string::String, Token)> = Vec::new();
 
     let result_option = match lib
@@ -136,20 +137,21 @@ pub fn expect_collection(arg: &Token, token_checks: Vec<IsToken>) -> bool
     return true;
 }
 
+#[allow(dead_code)]
 pub enum FunctionCall<T, U, R>
     where Token: From<R>
 {
     a0(fn()),
     a0r(fn()->R), 
 
-    a1(fn(T) -> R),
+    a1(fn(T)),
     a1r(fn(T)->R),
 
     a2(fn(T, U)),
     a2r(fn(T, U)->R)
 }
 
-pub fn attach<T, U, R>(function_call: FunctionCall<T, U, R>) -> Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>
+pub fn attach<T, U, R>(function_call: FunctionCall<T, U, R>) -> DynamicFunctionCall
     where
         Token: From<T>,
         T: 'static,
@@ -202,3 +204,40 @@ pub fn attach<T, U, R>(function_call: FunctionCall<T, U, R>) -> Option<Box<dyn F
         _ => { None }
     }
 }
+
+#[macro_export]
+macro_rules! register_function
+{
+    ($functions: expr, $name:expr, $call:expr) =>
+    {
+        $functions.push(($name.to_string(), attach::<i32, i32, i32>(FunctionCall::a0($call))));
+    };
+    ($functions: expr, $name:expr, $call:expr, $t:ty) =>
+    {
+        $functions.push(($name.to_string(), attach::<$t, $t, $t>(FunctionCall::a1($call))));
+    };
+    ($functions: expr, $name:expr, $call:expr, $t:ty, $u:ty) =>
+    {
+        $functions.push(($name.to_string(), attach::<$t, $u, $u>(FunctionCall::a2($call))));
+    };
+}
+
+#[macro_export]
+macro_rules! register_function_return
+{
+    ($functions: expr, $name:expr, $call:expr, $r:ty) =>
+    {
+        $functions.push(($name.to_string(), attach::<$r, $r, $r>(FunctionCall::a0r($call))));
+    };
+    ($functions: expr, $name:expr, $call:expr, $t:ty, $r:ty) =>
+    {
+        $functions.push(($name.to_string(), attach::<$t, $t, $r>(FunctionCall::a1r($call))));
+    };
+    ($functions: expr, $name:expr, $call:expr, $t:ty, $u:ty, $r:ty) =>
+    {
+        $functions.push((name.to_string(), attach::<$t, $u, $r>(FunctionCall::a2r($call))));
+    };
+}
+
+pub (crate) use register_function;
+pub (crate) use register_function_return;

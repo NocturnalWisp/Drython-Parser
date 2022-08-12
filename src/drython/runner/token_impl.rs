@@ -405,6 +405,7 @@ impl Token
     }
 }
 
+// From other types
 impl From<i32> for Token
 {
     fn from(value: i32) -> Self
@@ -437,6 +438,15 @@ impl From<String> for Token
     }
 }
 
+impl From<Vec<Token>> for Token
+{
+    fn from(value: Vec<Token>) -> Self
+    {
+        Token::Collection(value)
+    }
+}
+
+// Into other types
 impl From<Token> for i32
 {
     fn from(value: Token) -> Self
