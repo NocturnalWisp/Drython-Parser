@@ -179,8 +179,6 @@ pub fn attach<T, U, R>(function_call: FunctionCall<T, U, R>) -> DynamicFunctionC
         {
             return Some(Box::new(move |args|
                     {
-
-                        println!("{:#?}", args);
                         Some(Token::from(call(T::from(args[0].clone()))))
                     }));
         },

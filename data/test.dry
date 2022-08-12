@@ -1,7 +1,5 @@
 System
 
-include math
-
 callme():
-    print(divide2([4.0, 2.0, 2.0]))
+    print(1 + 1 + '1')
 end

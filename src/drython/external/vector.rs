@@ -57,15 +57,5 @@ impl From<Token> for Vec<f32>
 
 fn divide2(vector: Vec<f32>) -> Vec<f32>
 {
-    let mut new_vec = vector.clone();
-    return new_vec.iter().map(|f| *f/2.0).collect::<Vec<f32>>();
+    return vector.iter().map(|f| *f/2.0).collect::<Vec<f32>>();
 }
-
-// fn magnitude(args: Vec<Token>) -> Option<Token>
-// {
-//     // if !expect(&args, vec![IsCollection]) { return None; }
-//     if !expect_collection(&args[0], vec![IsFloat, IsFloat, IsFloat]) {return None; }
-    
-
-//     None
-// }

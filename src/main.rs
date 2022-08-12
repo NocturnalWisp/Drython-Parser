@@ -13,6 +13,7 @@ fn main()
     {
         Result::Ok(result) =>
         {
+            println!("{:#?}", result.global_expressions);
             let mut runner = Runner::new(result);
 
             runner.run_setup();

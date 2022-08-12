@@ -18,12 +18,14 @@ impl Token
             (Token::Bool(a), Token::Int(b)) => Some(Token::Int(*a as i32 + b)),
             (Token::Bool(a), Token::Float(b)) => Some(Token::Float((*a as i32) as f32 + b)),
 
-            (Token::String(a), Token::String(b)) => Some(Token::String(format!("{}{}", a, b))),
             (Token::String(a), Token::Int(b)) => Some(Token::String(format!("{}{}", a, b))),
             (Token::String(a), Token::Float(b)) => Some(Token::String(format!("{}{}", a, b))),
             (Token::String(a), Token::Bool(b)) => Some(Token::String(format!("{}{}", a, b))),
 
-            //TODO: Add token to string concatenation.
+            (Token::String(a), Token::String(b)) => Some(Token::String(format!("{}{}", a, b))),
+            (Token::Int(a), Token::String(b)) => Some(Token::String(format!("{}{}", a, b))),
+            (Token::Float(a), Token::String(b)) => Some(Token::String(format!("{}{}", a, b))),
+            (Token::Bool(a), Token::String(b)) => Some(Token::String(format!("{}{}", a, b))),
             
             (Token::Collection(a), Token::Int(_)) => Some(Token::collection_add(a, other)),
             (Token::Collection(a), Token::Float(_)) => Some(Token::collection_add(a, other)),
