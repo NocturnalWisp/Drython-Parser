@@ -1,20 +1,14 @@
 use crate::drython::types::Token;
+use super::{RegisteredFunction, RegisteredVariable, register_custom_function};
 
-pub fn register_functs() -> Vec<(std::string::String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>)>
+pub fn register_functs(functions: &mut Vec<RegisteredFunction>)
 {
-    let mut functions: Vec<(std::string::String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>)> = Vec::new();
-
-    functions.push(("print".to_string(), Some(Box::new(print))));
-
-    functions
+    register_custom_function!(functions, "print", print);    
 }
 
-pub fn register_vars() -> Vec<(std::string::String, Token)>
+pub fn register_vars(variables: &mut Vec<RegisteredVariable>)
 {
-    let mut vars: Vec<(std::string::String, Token)> = Vec::new();
 
-
-    vars
 }
 
 fn print(args: Vec<Token>) -> Option<Token>

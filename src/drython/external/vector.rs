@@ -3,22 +3,14 @@ use super::IsToken::{*};
 
 use super::{expect, FunctionCall, attach, register_function_return};
 
-pub fn register_functs() -> Vec<RegisteredFunction>
+pub fn register_functs(functions: &mut Vec<RegisteredFunction>)
 {
-    let mut functions: Vec<RegisteredFunction> = Vec::new();
-
     register_function_return!(functions, "divide2", divide2, Vec<f32>, Vec<f32>);
-
-    functions
 }
 
-pub fn register_vars() -> Vec<RegisteredVariable>
+pub fn register_vars(variables: &mut Vec<RegisteredVariable>)
 {
-    let mut vars: Vec<RegisteredVariable> = Vec::new();
-
-    vars.push(("vector3.one".to_string(), Collection(vec![Float(1.0), Float(1.0), Float(1.0)])));
-
-    vars
+    variables.push(("vector3.one".to_string(), Collection(vec![Float(1.0), Float(1.0), Float(1.0)])));
 }
 
 impl From<Vec<f32>> for Token

@@ -9,7 +9,7 @@ use crate::Parser;
 
 use self::operation_runner::run_operation;
 
-use super::{types::{Runner, Token, ExpressionList}, parser::operation_parser::parse_operation, utility, external};
+use super::{types::{Runner, Token, ExpressionList, RegisteredFunction, RegisteredVariable}, parser::operation_parser::parse_operation, utility, external};
 
 use super::external::auto;
 
@@ -29,14 +29,18 @@ impl Runner
     pub fn run_setup(& mut self)
     {
         // Include base external functions and vars.
-        let mut auto_lib = (auto::register_functs(), auto::register_vars());
+        let mut functions: Vec<RegisteredFunction> = Vec::new();
+        let mut vars: Vec<RegisteredVariable> = Vec::new();
 
-        while let Some(function) = auto_lib.0.pop()
+        auto::register_functs(&mut functions);
+        auto::register_vars(&mut vars);
+
+        while let Some(function) = functions.pop()
         {
             self.external_functions.insert(function.0.clone(), function.1);
         }
 
-        while let Some(var) = auto_lib.1.pop()
+        while let Some(var) = vars.pop()
         {
             self.vars.insert(var.0.clone(), var.1.clone());
         }

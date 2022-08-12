@@ -58,23 +58,17 @@ impl PartialEq<Token> for IsToken
     }
 }
 
-pub fn get_lib(lib: &str) -> (Vec<(String, DynamicFunctionCall)>, Vec<(std::string::String, Token)>)
+pub fn get_lib(lib: &str) -> (Vec<RegisteredFunction>, Vec<RegisteredVariable>)
 {
-    let mut functions: Vec<(String, DynamicFunctionCall)> = Vec::new();
-    let mut vars: Vec<(std::string::String, Token)> = Vec::new();
+    let mut functions: Vec<RegisteredFunction> = Vec::new();
+    let mut vars: Vec<RegisteredVariable> = Vec::new();
 
-    let result_option = match lib
+    match lib
     {
-        "vector" => Some((vector::register_functs(), vector::register_vars())),
-        "math" => Some((math::register_functs(), math::register_vars())),
-        _ => None
+        "vector" => { vector::register_functs(&mut functions); vector::register_vars(&mut vars); },
+        "math" => { math::register_functs(&mut functions); math::register_vars(&mut vars); },
+        _ => ()
     };
-
-    if let Some(mut result) = result_option
-    {
-        functions.append(&mut result.0);
-        vars.append(&mut result.1);
-    }
 
     (functions, vars)
 }
@@ -239,5 +233,15 @@ macro_rules! register_function_return
     };
 }
 
+#[macro_export]
+macro_rules! register_custom_function
+{
+    ($functions: expr, $name:expr, $call:expr) =>
+    {
+        $functions.push(($name.to_string(), Some(Box::new($call))));
+    }
+}
+
 pub (crate) use register_function;
 pub (crate) use register_function_return;
+pub (crate) use register_custom_function;
