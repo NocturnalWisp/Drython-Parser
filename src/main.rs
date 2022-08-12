@@ -7,9 +7,9 @@ use crate::drython::types::Runner;
 
 fn main()
 {
-    let mut parse_warnings: LinkedHashMap<usize, String> = LinkedHashMap::new();
+    let mut error_manager = drython::types::error::ErrorManager::new();
 
-    match Parser::parse_file("data/test.dry", &mut parse_warnings)
+    match Parser::parse_file("data/test.dry", &mut error_manager)
     {
         Result::Ok(result) =>
         {
@@ -23,7 +23,6 @@ fn main()
             if parse_warnings.len() > 0
             {
                 println!("{} contained the following issues:", "data/test.dry");
-                println!("{:?}", parse_warnings);
             }
         },
         Result::Err(error) =>

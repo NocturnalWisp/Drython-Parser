@@ -39,13 +39,16 @@ impl Parser
         let lines: Vec<String> = 
             Parser::handle_content_replace(&contents, warning_list);
 
+        println!("{:#?}", lines);
+        println!("");
+
         // Determining Script Type.
         let first_line = &lines[0][2..].trim_end_matches(";");
         let script_type = ScriptType::from_string(first_line);
 
         if let ScriptType::None = script_type
         {
-            return Err(format!("Unexpected script type: {}", first_line));
+            return  Err(format!("Unexpected script type: {}", first_line));
         }
 
         // Parse global expressions.
@@ -76,25 +79,26 @@ impl Parser
                 {
                     new_string.push(format!("{}){}", index+1, new_line));
                     new_line = String::new();
+
+                    if in_string_literal
+                    {
+                        warning_list.insert(index, "String literal was not closed.".to_string());
+                    }
                     in_string_literal = false;
                     continue;
                 }
 
                 // Don't include white space unless in string literal.
-                if (!c.is_whitespace()) || in_string_literal
-                {
-                    new_line.push(c);
-                }
+                // if (!c.is_whitespace()) || in_string_literal
+                // {
+                //     new_line.push(c);
+                // }
+                new_line.push(c);
 
                 if c == '"' || c == '\''
                 {
                     in_string_literal = !in_string_literal;
                 }
-            }
-            //TOOO: Throw error if in string literal still because it means there is an extra quote somewhere.
-            if in_string_literal
-            {
-                warning_list.insert(index, "String literal was not closed.".to_string());
             }
 
             new_string.push(format!("{}){}", index+1, new_line));

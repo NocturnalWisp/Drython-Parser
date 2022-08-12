@@ -3,6 +3,8 @@ use linked_hash_map::LinkedHashMap;
 
 use super::script_type::ScriptType;
 
+pub mod error;
+
 #[derive(Debug)]
 pub struct Parser
 {
@@ -80,17 +82,4 @@ pub struct Runner
     pub internal_functions: HashMap<String, fn(&Runner, &str, Vec<Token>) -> Option<Token>>,
     pub external_functions: HashMap<String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>>,
     pub vars: HashMap<String, Token>
-}
-
-pub struct ErrorManager
-{
-    errors: LinkedHashMap<(usize, usize), String>
-}
-
-impl ErrorManager
-{
-    pub fn add_error(&mut self, error_location: (usize, usize), message: &str)
-    {
-        self.errors.insert(error_location, message.to_string());
-    }
 }
