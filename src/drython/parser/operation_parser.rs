@@ -6,6 +6,8 @@ use crate::drython::types::Token;
 
 use crate::drython::utility;
 
+use crate::drython::types::error::*;
+
 // Used internally for parsing tokens from an operation.
 // (Without the values associated with Types::Token)
 #[derive(PartialEq, Clone, Debug)]
@@ -27,7 +29,7 @@ use ParseTokenType as PTT;
 
 // Hybrid polish notation/ast tree. Internal operations (Expressed in parentheses)
 // are put into a recursive calculation.
-pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize, String>, line_number: usize) -> Vec<Token>
+pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line_number: usize) -> Vec<Token>
 {
     let mut last_token_type = ParseTokenType::None;
     let mut token_start: usize = 0;
@@ -173,7 +175,7 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                         let collection_operations = utility::split_by(&string[token_start..token_end], ',').iter()
                             // Use map to make sure multi-operations are kept in a Token::Operation.
                             .map(|x| {
-                                let operation = parse_operation(x, warning_list, line_number);
+                                let operation = parse_operation(x, error_manager, line_number);
 
                                 match operation.len()
                                 {
@@ -221,7 +223,7 @@ pub fn parse_operation<'a>(string: & str, warning_list: &mut LinkedHashMap<usize
                 {
                     if inner_parenth_count == 0
                     {
-                        let token = Token::Operation(parse_operation(&string[token_start..token_end], warning_list, line_number));
+                        let token = Token::Operation(parse_operation(&string[token_start..token_end], error_manager, line_number));
                         
                         tokens_ptr.push(token);
 

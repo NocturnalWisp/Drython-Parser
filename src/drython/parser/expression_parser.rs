@@ -11,7 +11,9 @@ use super::types::ExpressionList;
 use super::variable_parser::parse_var;
 use scope_parser::parse_scope;
 
-pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_list:&mut LinkedHashMap<usize, String>) -> ExpressionList
+use super::types::error::*;
+
+pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_manager: &mut ErrorManager) -> ExpressionList
 {
     let mut single_op: HashMap<usize, (String, Vec<Token>)> = HashMap::new();
     let mut multi_ops: HashMap<usize, (String, Vec<Vec<Token>>)> = HashMap::new();
@@ -58,13 +60,13 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                     let mut internal_expression = parse_expressions(
                         &expressions[scope_start+1..i].to_vec(),
                         scope_start+1+line_start,
-                        warning_list
+                        error_manager
                     );
 
                     match parse_scope(&expressions[scope_start])
                     {
                         Ok(result) => {internal_expression.scope_info = result;}
-                        Err(error) => {warning_list.insert(line_start, error);}
+                        Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
                     }
 
                     internal_expressions.insert(operation_index, internal_expression);
@@ -101,12 +103,12 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                 {
                     Ok(statement) => 
                     {
-                        let operation = operation_parser::parse_operation(statement, warning_list, line_start+i);
+                        let operation = operation_parser::parse_operation(statement, error_manager, line_start+i);
 
                         single_op.insert(operation_index, ("return".to_string(), operation));
                         operation_index += 1;
                     }
-                    Err(error) => {warning_list.insert(line_start+i, error);}
+                    Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
                 }
             }
             // Variable assignment.
@@ -116,12 +118,12 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
                 {
                     Ok(result) => 
                     {
-                        let operation = operation_parser::parse_operation(&result.1, warning_list, line_start+i);
+                        let operation = operation_parser::parse_operation(&result.1, error_manager, line_start+i);
 
                         single_op.insert(operation_index, (result.0, operation));
                         operation_index += 1;
                     },
-                    Err(error) => {warning_list.insert(line_start, error);}
+                    Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
                 }
             }
             // Function call.
@@ -135,13 +137,13 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
 
                         for statement in result.1
                         {
-                            operations.push(operation_parser::parse_operation(&statement, warning_list, line_start+i));
+                            operations.push(operation_parser::parse_operation(&statement, error_manager, line_start+i));
                         }
 
                         multi_ops.insert(operation_index, (result.0, operations));
                         operation_index += 1;
                     },
-                    Err(error) => {warning_list.insert(line_start+i, error);}
+                    Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
                 }
             }
             // loop control functions
@@ -171,7 +173,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, warning_li
             }
             else if expression_type == ExpressionType::None
             {
-                warning_list.insert(line_start+i, "Could not parse the expression due to unrecognizable characters.".to_string());
+                push_error!(error_manager, ParseError::new(line_start+i, "Could not parse the expression due to unrecognizable characters."));
             }
         }
     }

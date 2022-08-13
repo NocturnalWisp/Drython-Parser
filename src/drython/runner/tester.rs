@@ -1,9 +1,9 @@
 use super::super::types::Runner;
 use super::super::types::error::{*};
 
-pub fn test_runner(runner: &mut Runner, error_manager: ErrorManager)
+pub fn test_runner(runner: &mut Runner, error_manager: &mut ErrorManager)
 {
-    runner.run_setup();
+    runner.run_setup(error_manager);
 
 
 

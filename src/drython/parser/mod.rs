@@ -11,13 +11,14 @@ use super::script_type::ScriptType;
 use super::types;
 use super::types::Parser;
 use super::utility;
+use super::types::error::*;
 
 impl Parser
 {
     // Main parse function.
     pub fn parse_file(
         file_path: &str,
-        warning_list: &mut LinkedHashMap<usize, String>
+        error_manager: &mut ErrorManager
     ) -> Result<Parser, String>
     {
         let mut contents: String = match fs::read_to_string(&file_path)
@@ -37,7 +38,7 @@ impl Parser
         contents = contents.replace("\\\r\n", "");
 
         let lines: Vec<String> = 
-            Parser::handle_content_replace(&contents, warning_list);
+            Parser::handle_content_replace(&contents, error_manager);
 
         println!("{:#?}", lines);
 
@@ -51,7 +52,7 @@ impl Parser
         }
 
         // Parse global expressions.
-        let global_expressions = parse_expressions(&lines[1..].to_vec(), 2, warning_list);
+        let global_expressions = parse_expressions(&lines[1..].to_vec(), 2, error_manager);
 
         Ok(Parser
         {
@@ -61,7 +62,7 @@ impl Parser
     }
 
     // Parses the content by removing empty spaces and placing semi colons at the end of lines.
-    fn handle_content_replace(string: &str, warning_list: &mut LinkedHashMap<usize, String>) -> Vec<String>
+    fn handle_content_replace(string: &str, error_manager: &mut ErrorManager) -> Vec<String>
     {
         let mut new_string: Vec<String> = Vec::new();
 
@@ -81,7 +82,7 @@ impl Parser
 
                     if in_string_literal
                     {
-                        warning_list.insert(index, "String literal was not closed.".to_string());
+                        push_error!(error_manager, ParseError::new(index, "String was not enclosed."));
                     }
                     in_string_literal = false;
                     continue;

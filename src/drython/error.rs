@@ -44,17 +44,17 @@ pub trait DrythonError
 
 pub struct ParseError
 {
-    location: (usize, usize),
+    location: usize,
     message: String
 }
 
 impl ParseError
 {
-    pub fn new(line_number: usize, char_number: usize, message: &str) -> Self
+    pub fn new(line_number: usize, message: &str) -> Self
     {
         ParseError
         {
-            location: (line_number, char_number),
+            location: line_number,
             message: message.to_string()
         }
     }
@@ -63,7 +63,7 @@ impl DrythonError for ParseError
 {
     fn display(&self) -> String
     {
-        format!("Drython Parse Error: Line [{}] Character [{}] - {}", self.location.0, self.location.1, self.message)
+        format!("Drython Parse Error: Line [{}] - {}", self.location, self.message)
     }
 }
 
