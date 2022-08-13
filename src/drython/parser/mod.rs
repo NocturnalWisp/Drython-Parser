@@ -40,7 +40,6 @@ impl Parser
             Parser::handle_content_replace(&contents, warning_list);
 
         println!("{:#?}", lines);
-        println!("");
 
         // Determining Script Type.
         let first_line = &lines[0][2..].trim_end_matches(";");
@@ -89,11 +88,10 @@ impl Parser
                 }
 
                 // Don't include white space unless in string literal.
-                // if (!c.is_whitespace()) || in_string_literal
-                // {
-                //     new_line.push(c);
-                // }
-                new_line.push(c);
+                if (!c.is_whitespace()) || in_string_literal
+                {
+                    new_line.push(c);
+                }
 
                 if c == '"' || c == '\''
                 {

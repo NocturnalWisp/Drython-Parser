@@ -1,4 +1,5 @@
-use super::super::types::{Runner, ErrorManager};
+use super::super::types::Runner;
+use super::super::types::error::{*};
 
 pub fn test_runner(runner: &mut Runner, error_manager: ErrorManager)
 {

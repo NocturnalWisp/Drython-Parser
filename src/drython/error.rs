@@ -34,7 +34,7 @@ macro_rules! push_error
 pub (crate) use push_error;
 
 // For parser
-trait DrythonError
+pub trait DrythonError
 {
     fn display(&self) -> String
     {
@@ -121,7 +121,7 @@ impl DrythonError for RuntimeError
         }
 
         format!("Drython Runtime Error: {}Line [{}] - {}",
-            if in_function { format!("Function [\"{}\"] ", self.function_name.unwrap()).as_str() } else {""},
+            if in_function { format!("Function [\"{}\"] ", self.function_name.clone().unwrap()) } else {"".to_string()},
             self.line_number,
             self.message
         )
