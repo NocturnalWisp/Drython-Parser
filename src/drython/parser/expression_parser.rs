@@ -41,18 +41,25 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
         }
         else {continue;}
 
-        let expression_type = utility::get_expression_type(exp);
+        let expression_type_result = utility::get_expression_type(exp, line_start+i, error_manager);
+        let expression_type = expression_type_result.clone().unwrap_or(ExpressionType::None);
+
+        if let Err(message) = &expression_type_result
+        {
+            push_error!(error_manager, ParseError::new(line_start+i, message.as_str()));
+            continue;
+        }
 
         if inside_scope
         {
-            if utility::expression_is_scope(exp)
+            if utility::expression_is_scope(exp, line_start+i, error_manager)
             {
                 scope_count += 1;
             }
 
             let exp_lower = exp.to_lowercase();
 
-            if exp_lower == "end" || exp_lower.starts_with("elif") || exp_lower.starts_with("elseif")  || exp_lower.starts_with("else")
+            if expression_type == ExpressionType::End || exp_lower.starts_with("elif") || exp_lower.starts_with("elseif")  || exp_lower.starts_with("else")
             {
                 if scope_count == 0
                 {
@@ -62,7 +69,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                         error_manager
                     );
 
-                    match parse_scope(&expressions[scope_start])
+                    match parse_scope(&expressions[scope_start], line_start+i, error_manager)
                     {
                         Ok(result) => {internal_expression.scope_info = result;}
                         Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
@@ -90,7 +97,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
         else
         {            
             // Scope change (if/loop).
-            if utility::expression_is_scope(exp)
+            if utility::expression_is_scope(exp, line_start+i, error_manager)
             {
                 scope_start = i;
                 inside_scope = true;
@@ -169,10 +176,6 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                 });
                 
                 includes.push(library.to_string());
-            }
-            else if expression_type == ExpressionType::None
-            {
-                push_error!(error_manager, ParseError::new(line_start+i, "Could not parse the expression due to unrecognizable characters."));
             }
         }
     }

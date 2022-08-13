@@ -1,6 +1,8 @@
 use crate::drython::utility::{get_expression_type, ExpressionType};
 
-pub fn parse_scope(expression: &str) -> Result<(Option<String>, Option<String>), String>
+use crate::drython::types::error::*;
+
+pub fn parse_scope(expression: &str, line_number: usize, error_manager: &mut ErrorManager) -> Result<(Option<String>, Option<String>), String>
 {
     let exp;
 
@@ -10,7 +12,14 @@ pub fn parse_scope(expression: &str) -> Result<(Option<String>, Option<String>),
     }
     else {return Ok((None, None));}
 
-    let expression_type = get_expression_type(exp);
+    let expression_type_result = get_expression_type(exp, line_number, error_manager);
+    let expression_type = expression_type_result.clone().unwrap_or(ExpressionType::None);
+
+    if let Err(message) = &expression_type_result
+    {
+        push_error!(error_manager, ParseError::new(line_number, message.as_str()));
+        return Err(message.to_string());
+    }
 
     // Loop
     if expression_type == ExpressionType::Loop

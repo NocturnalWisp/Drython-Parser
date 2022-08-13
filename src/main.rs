@@ -22,7 +22,7 @@ fn main()
             if error_manager.errors.len() > 0
             {
                 println!("{} contained the following issues:", "data/test.dry");
-                println!("{:?}", error_manager.errors.iter().map(|e| e.display()).collect::<Vec<String>>());
+                println!("{:#?}", error_manager.errors.iter().map(|e| e.display()).collect::<Vec<String>>());
             }
         },
         Result::Err(error) =>

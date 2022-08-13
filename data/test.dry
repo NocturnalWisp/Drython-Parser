@@ -3,3 +3,4 @@ System
 callme():
     print(1 + 1 + '1')
 end
+^^^@#&exp_lower == "end"

@@ -1,19 +1,22 @@
-pub fn get_expression_type(string: &str) -> ExpressionType
+use crate::drython::types::error::*;
+
+pub fn get_expression_type(string: &str, line_number: usize, error_manager: &mut ErrorManager) -> Result<ExpressionType, String>
 {
     let mut buffer = String::new();
     let mut started_call_or_function = false;
 
     match string.to_lowercase().as_str()
     {
-        "break" => {return ExpressionType::Break;}
-        "continue" => {return ExpressionType::Continue;}
+        "break" => {return Ok(ExpressionType::Break);}
+        "continue" => {return Ok(ExpressionType::Continue);}
+        "end" => {return Ok(ExpressionType::End);}
         _ => ()
     };
 
     // Comments
     if string.starts_with("//") || string.starts_with("#")
     {
-        return ExpressionType::Comment;
+        return Ok(ExpressionType::Comment);
     }
 
     for c in string.chars()
@@ -23,9 +26,9 @@ pub fn get_expression_type(string: &str) -> ExpressionType
             match c
             {
                 c if c.is_alphanumeric() || c == '.' => buffer.push(c),
-                '=' => return ExpressionType::Assignment,
+                '=' => return Ok(ExpressionType::Assignment),
                 '(' => started_call_or_function = true,
-                _ => return ExpressionType::None, //Invalid char.
+                _ => return Err(format!("Failed to recognize character: '{}'", c))
             }
         }
         // Check for the end of a function creation.
@@ -33,7 +36,7 @@ pub fn get_expression_type(string: &str) -> ExpressionType
         {
             match c
             {
-                ':' => return ExpressionType::Function,
+                ':' => return Ok(ExpressionType::Function),
                 _ => ()
             }
         }
@@ -42,12 +45,12 @@ pub fn get_expression_type(string: &str) -> ExpressionType
         // Later parsing will check for errors in missing colons or arguments.
         match buffer.to_lowercase().as_str()
         {
-            "loop" => return ExpressionType::Loop,
-            "if" => return ExpressionType::If,
-            "elif"|"elseif" => return ExpressionType::Elif,
-            "else" => return ExpressionType::Else,
-            "return" => return ExpressionType::Return,
-            "use"|"import"|"include"|"using" => return ExpressionType::Library,
+            "loop" => return Ok(ExpressionType::Loop),
+            "if" => return Ok(ExpressionType::If),
+            "elif"|"elseif" => return Ok(ExpressionType::Elif),
+            "else" => return Ok(ExpressionType::Else),
+            "return" => return Ok(ExpressionType::Return),
+            "use"|"import"|"include"|"using" => return Ok(ExpressionType::Library),
             _ => ()
         }
     }
@@ -56,13 +59,13 @@ pub fn get_expression_type(string: &str) -> ExpressionType
     // (Char search closed out before finding a colon.)
     if started_call_or_function
     {
-        return ExpressionType::Call;
+        return Ok(ExpressionType::Call);
     }
 
-    ExpressionType::None
+    Err("Unkown Expression".to_string())
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum ExpressionType
 {
     None,
@@ -78,15 +81,16 @@ pub enum ExpressionType
     Continue,
     Library,
     Comment,
+    End,
 }
 
-pub fn expression_is_scope(string: &str) -> bool
+pub fn expression_is_scope(string: &str, line_number: usize, error_manager: &mut ErrorManager) -> bool
 {
-    match get_expression_type(string)
+    match get_expression_type(string, line_number, error_manager)
     {
-        ExpressionType::Function => true,
-        ExpressionType::If => true,
-        ExpressionType::Loop => true,
+        Ok(ExpressionType::Function) => true,
+        Ok(ExpressionType::If) => true,
+        Ok(ExpressionType::Loop) => true,
         _ => false
     }
 }
