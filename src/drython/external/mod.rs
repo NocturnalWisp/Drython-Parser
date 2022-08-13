@@ -77,6 +77,7 @@ pub fn get_lib(lib: &str) -> (Vec<RegisteredFunction>, Vec<RegisteredVariable>)
 // from the passed token arguments.
 
 // Returns true if the discriminents match the arguments.
+#[allow(dead_code)]
 pub fn expect(args: &[Token], token_checks: &[&[IsToken]]) -> bool
 {
     if args.len() != token_checks.len()
@@ -106,6 +107,7 @@ pub fn expect(args: &[Token], token_checks: &[&[IsToken]]) -> bool
 
 // Expects certain values within a collection.
 // Use "expect()" before this for better error handling.
+#[allow(dead_code)]
 pub fn expect_collection(arg: &Token, token_checks: Vec<IsToken>) -> bool
 {
     if let Token::Collection(items) = arg
@@ -135,14 +137,14 @@ pub fn expect_collection(arg: &Token, token_checks: Vec<IsToken>) -> bool
 pub enum FunctionCall<T, U, R>
     where Token: From<R>
 {
-    a0(fn()),
-    a0r(fn()->R), 
+    A0(fn()),
+    A0R(fn()->R), 
 
-    a1(fn(T)),
-    a1r(fn(T)->R),
+    A1(fn(T)),
+    A1R(fn(T)->R),
 
-    a2(fn(T, U)),
-    a2r(fn(T, U)->R)
+    A2(fn(T, U)),
+    A2R(fn(T, U)->R)
 }
 
 pub fn attach<T, U, R>(function_call: FunctionCall<T, U, R>) -> DynamicFunctionCall
@@ -160,40 +162,39 @@ pub fn attach<T, U, R>(function_call: FunctionCall<T, U, R>) -> DynamicFunctionC
 {
     match function_call
     {
-        FunctionCall::a0(call) =>
+        FunctionCall::A0(call) =>
         {
-            return Some(Box::new(move |args| { call(); return None; }));
+            return Some(Box::new(move |_args| { call(); return None; }));
         },
-        FunctionCall::a0r(call) =>
+        FunctionCall::A0R(call) =>
         {
-            return Some(Box::new(move |args|
+            return Some(Box::new(move |_args|
                     {
                         Some(Token::from(call()))
                     }));
         },
-        FunctionCall::a1(call) =>
+        FunctionCall::A1(call) =>
         {
             return Some(Box::new(move |args| { call(T::from(args[0].clone())); return None; }));
         },
-        FunctionCall::a1r(call) =>
+        FunctionCall::A1R(call) =>
         {
             return Some(Box::new(move |args|
                     {
                         Some(Token::from(call(T::from(args[0].clone()))))
                     }));
         },
-        FunctionCall::a2(call) =>
+        FunctionCall::A2(call) =>
         {
             return Some(Box::new(move |args| { call(T::from(args[0].clone()), U::from(args[1].clone())); return None; }));
         },
-        FunctionCall::a2r(call) =>
+        FunctionCall::A2R(call) =>
         {
             return Some(Box::new(move |args|
                     {
                         Some(Token::from(call(T::from(args[0].clone()), U::from(args[1].clone()))))
                     }));
         },
-        _ => { None }
     }
 }
 
@@ -202,15 +203,15 @@ macro_rules! register_function
 {
     ($functions: expr, $name:expr, $call:expr) =>
     {
-        $functions.push(($name.to_string(), attach::<i32, i32, i32>(FunctionCall::a0($call))));
+        $functions.push(($name.to_string(), attach::<i32, i32, i32>(FunctionCall::A0($call))));
     };
     ($functions: expr, $name:expr, $call:expr, $t:ty) =>
     {
-        $functions.push(($name.to_string(), attach::<$t, $t, $t>(FunctionCall::a1($call))));
+        $functions.push(($name.to_string(), attach::<$t, $t, $t>(FunctionCall::A1($call))));
     };
     ($functions: expr, $name:expr, $call:expr, $t:ty, $u:ty) =>
     {
-        $functions.push(($name.to_string(), attach::<$t, $u, $u>(FunctionCall::a2($call))));
+        $functions.push(($name.to_string(), attach::<$t, $u, $u>(FunctionCall::A2($call))));
     };
 }
 
@@ -219,15 +220,15 @@ macro_rules! register_function_return
 {
     ($functions: expr, $name:expr, $call:expr, $r:ty) =>
     {
-        $functions.push(($name.to_string(), attach::<$r, $r, $r>(FunctionCall::a0r($call))));
+        $functions.push(($name.to_string(), attach::<$r, $r, $r>(FunctionCall::A0R($call))));
     };
     ($functions: expr, $name:expr, $call:expr, $t:ty, $r:ty) =>
     {
-        $functions.push(($name.to_string(), attach::<$t, $t, $r>(FunctionCall::a1r($call))));
+        $functions.push(($name.to_string(), attach::<$t, $t, $r>(FunctionCall::A1R($call))));
     };
     ($functions: expr, $name:expr, $call:expr, $t:ty, $u:ty, $r:ty) =>
     {
-        $functions.push((name.to_string(), attach::<$t, $u, $r>(FunctionCall::a2r($call))));
+        $functions.push((name.to_string(), attach::<$t, $u, $r>(FunctionCall::A2R($call))));
     };
 }
 
@@ -240,6 +241,7 @@ macro_rules! register_custom_function
     }
 }
 
+#[allow(unused_imports)]
 pub (crate) use register_function;
 pub (crate) use register_function_return;
 pub (crate) use register_custom_function;

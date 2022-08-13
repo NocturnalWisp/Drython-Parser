@@ -1,7 +1,6 @@
-use crate::drython::types::{Token, RegisteredFunction, RegisteredVariable};
-use super::IsToken::{*};
+use crate::drython::types::{RegisteredFunction, RegisteredVariable};
 
-use super::{expect, FunctionCall, attach, register_function, register_function_return};
+use super::{FunctionCall, attach, register_function_return};
 
 pub fn register_functs(functions: &mut Vec<RegisteredFunction>)
 {

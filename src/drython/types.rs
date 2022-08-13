@@ -1,5 +1,4 @@
-use std::{collections::HashMap};
-use linked_hash_map::LinkedHashMap;
+use std::collections::HashMap;
 
 use super::script_type::ScriptType;
 
