@@ -195,7 +195,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
             }
             else if expression_type == ExpressionType::End
             {
-                push_error!(error_manager, ParseError::new(line_start+i, "Too many 'end' statements are present."));
+                push_error!(error_manager, ParseError::new(line_start+i, "Too many 'end' statements are present. Are you missing a ':' after a function decleration?"));
             }
 
         }
@@ -220,18 +220,25 @@ fn parse_call(call: &str) -> Result<(String, Vec<String>), String>
     
     if let Some(first) = call.split_once("(")
     {
-        function = first.0.to_string();
-        
-        match utility::split_by(&first.1[0..first.1.len()-1], ',')
+        if first.1.len() > 0 && first.1.as_bytes()[first.1.len()-1] == b')'
         {
-            Ok(result) =>
+            function = first.0.to_string();
+            
+            match utility::split_by(&first.1[0..first.1.len()-1], ',')
             {
-                arguments = result;
+                Ok(result) =>
+                {
+                    arguments = result;
+                }
+                Err(error) =>
+                {
+                    return Err(error);
+                }
             }
-            Err(error) =>
-            {
-                return Err(error);
-            }
+        }
+        else
+        {
+            return Err("No closing parenthesis found on function call.".to_string());
         }
     }
     else

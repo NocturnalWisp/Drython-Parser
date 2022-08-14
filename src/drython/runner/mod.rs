@@ -86,11 +86,15 @@ impl Runner
         }
     }
 
-    pub fn call_function(&self, function_name: &str, args: Vec<Token>) -> Option<Token>
+    pub fn call_function(&self, function_name: &str, args: Vec<Token>, error_manager: &mut ErrorManager) -> Option<Token>
     {
         if self.internal_functions.contains_key(function_name)
         {
-            return self.internal_functions[function_name](self, function_name, args);
+            let result = self.internal_functions[function_name](self, function_name, args);
+            
+            error_manager.merge(result.1);
+
+            return result.0;
         }
 
         if self.external_functions.contains_key(function_name)
@@ -105,7 +109,7 @@ impl Runner
     }
 
     // Called by a function pointer from a registered internal function.
-    fn call_internal(&self, function_name: &str, arguments: Vec<Token>) -> Option<Token>
+    fn call_internal(&self, function_name: &str, arguments: Vec<Token>) -> (Option<Token>, ErrorManager)
     {
         let mut error_manager = ErrorManager::new();
 
@@ -131,12 +135,23 @@ impl Runner
                 {
                     Ok(mut parsed_arg_names) =>
                     {
-                        for i in 0..parsed_arg_names.len()
+                        if parsed_arg_names.len() == arguments.len()
                         {
-                            arg_vars.insert(
-                                parsed_arg_names.pop().unwrap_or("null".to_string()),
-                                arguments[i].clone()
-                            );
+                            for i in 0..parsed_arg_names.len()
+                            {
+                                println!("{:#?}", parsed_arg_names);
+                                arg_vars.insert(
+                                    parsed_arg_names.pop().unwrap_or("null".to_string()),
+                                    arguments[i].clone()
+                                );
+                            }
+                        }
+                        else
+                        {
+                            //TODO: Inject line number.
+                            push_error!(error_manager,
+                                RuntimeError::new(0, Some(function_name.to_string()),
+                                    format!("Expected {} arguments, but only recieved {}.", parsed_arg_names.len(), arguments.len()).as_str()));
                         }
                     }
                     Err(error) =>
@@ -154,12 +169,12 @@ impl Runner
             return_result = self.handle_scope(function.1, &mut scope_vars, false, &mut (0, Some(function_name.to_string()), &mut error_manager));
         }
 
-        return_result
+        (return_result, error_manager)
     }
 
     // Resursive function to handle calling order in internal scopes.
     // Originally called by call_internal for a parsed function.
-    fn handle_scope(&self, function: &ExpressionList, vars: &mut HashMap<String, Token>, is_loop: bool, errors_args: &mut RuntimeErrorArguments) -> Option<Token>
+    fn handle_scope(&self, function: &ExpressionList, vars: &mut HashMap<String, Token>, is_loop: bool, error_args: &mut RuntimeErrorArguments) -> Option<Token>
     {
         let mut return_result: Option<Token> = None;
         
@@ -176,7 +191,7 @@ impl Runner
                 _ if function.single_op.contains_key(&i) =>
                 {
                     let expression = &function.single_op[&i];
-                    let operation = run_operation(self, &expression.1, &vars, errors_args);
+                    let operation = run_operation(self, &expression.1, &vars, error_args);
 
                     match expression.0.as_str()
                     {
@@ -231,13 +246,13 @@ impl Runner
 
                     for tokens in expression.1.iter()
                     {
-                        if let Some(token) = run_operation(self, &tokens, &vars, errors_args)
+                        if let Some(token) = run_operation(self, &tokens, &vars, error_args)
                         {
                             args.push(token);
                         }
                     }
 
-                    self.call_function(&expression.0, args);
+                    self.call_function(&expression.0, args, error_args.2);
                 },
                 // Internal scope.
                 _ if function.internal_expressions.contains_key(&i) =>
@@ -252,11 +267,11 @@ impl Runner
                                 if let Some(if_op) = &function.scope_info.1
                                 {
                                     // Only handle scope if the "if operation" is true.
-                                    let operation = parse_operation(if_op, errors_args.2, 0);
+                                    let operation = parse_operation(if_op, error_args.2, 0);
 
-                                    if let Some(Token::Bool(true)) = run_operation(self, &operation, &vars, errors_args)
+                                    if let Some(Token::Bool(true)) = run_operation(self, &operation, &vars, error_args)
                                     {
-                                        return_result = self.handle_scope(function, vars, is_loop, errors_args);
+                                        return_result = self.handle_scope(function, vars, is_loop, error_args);
                                         previous_if_failed = false;
                                     }
                                     else
@@ -273,11 +288,11 @@ impl Runner
                                     if let Some(if_op) = &function.scope_info.1
                                     {
                                         // Only handle scope if the "elif operation" is true.
-                                        let operation = parse_operation(if_op, errors_args.2, 0);
+                                        let operation = parse_operation(if_op, error_args.2, 0);
 
-                                        if let Some(Token::Bool(true)) = run_operation(self, &operation, &vars, errors_args)
+                                        if let Some(Token::Bool(true)) = run_operation(self, &operation, &vars, error_args)
                                         {
-                                            return_result = self.handle_scope(function, vars, is_loop, errors_args);
+                                            return_result = self.handle_scope(function, vars, is_loop, error_args);
                                             previous_if_failed = false;
                                         }
                                         else
@@ -292,14 +307,14 @@ impl Runner
                             {
                                 if previous_if_failed
                                 {
-                                    return_result = self.handle_scope(function, vars, is_loop, errors_args);
+                                    return_result = self.handle_scope(function, vars, is_loop, error_args);
                                 }
                             },
                             "loop" =>
                             {
                                 loop
                                 {
-                                    return_result = self.handle_scope(function, vars, true, errors_args);
+                                    return_result = self.handle_scope(function, vars, true, error_args);
 
                                     if let Some(Token::Break) = return_result
                                     {
@@ -312,12 +327,12 @@ impl Runner
                                     }
                                 }
                             }
-                            _ => return_result = self.handle_scope(function, vars, is_loop, errors_args)
+                            _ => return_result = self.handle_scope(function, vars, is_loop, error_args)
                         }
                     }
                     else
                     {
-                        return_result = self.handle_scope(function, vars, is_loop, errors_args);
+                        return_result = self.handle_scope(function, vars, is_loop, error_args);
                     }
                 },
                 _ => ()

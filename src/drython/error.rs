@@ -21,6 +21,11 @@ impl ErrorManager
     {
         self.errors.push_back(error);
     }
+
+    pub fn merge(&mut self, mut other: ErrorManager)
+    {
+        self.errors.append(&mut other.errors);
+    }
 }
 
 // Use as a function on the error manager. (Eg. error_manager.error!(ParseError::new(0, 0, "Error.")); )
@@ -127,7 +132,7 @@ impl DrythonError for RuntimeError
         }
 
         format!("Drython Runtime Error: {}Line [{}] - {}",
-            if in_function { format!("Function [\"{}\"] ", self.function_name.clone().unwrap()) } else {"".to_string()},
+            if in_function { format!("Function ['{}'] ", self.function_name.clone().unwrap()) } else {"".to_string()},
             self.line_number,
             self.message
         )

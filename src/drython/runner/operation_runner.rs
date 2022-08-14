@@ -89,7 +89,7 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                 }
             }
             
-            let call_result = runner.call_function(name, parsed_args);
+            let call_result = runner.call_function(name, parsed_args, error_args.2);
             
             if let None = call_result
             {

@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use super::script_type::ScriptType;
 
+use crate::drython::types::error::ErrorManager;
+
 pub mod error;
 
 #[derive(Debug)]
@@ -79,7 +81,7 @@ pub struct Operation
 pub struct Runner
 {
     pub parser: Parser,
-    pub internal_functions: HashMap<String, fn(&Runner, &str, Vec<Token>) -> Option<Token>>,
+    pub internal_functions: HashMap<String, fn(&Runner, &str, Vec<Token>) -> (Option<Token>, ErrorManager)>,
     pub external_functions: HashMap<String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>>,
     pub vars: HashMap<String, Token>
 }

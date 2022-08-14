@@ -17,7 +17,7 @@ fn main()
 
             runner.run_setup(&mut error_manager);
 
-            runner.call_function("callme", vec![]);
+            runner.call_function("callme", vec![], &mut error_manager);
 
             if error_manager.errors.len() > 0
             {
