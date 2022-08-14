@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+pub type RuntimeErrorArguments<'a> = (usize, Option<String>, &'a mut ErrorManager);
+
 pub struct ErrorManager
 {
     pub errors: VecDeque<Box<dyn DrythonError>>
@@ -28,7 +30,11 @@ macro_rules! push_error
     ($manager: ident, $error: expr) =>
     {
         $manager.add_error(Box::new($error))
-    }
+    };
+    ($manager: expr, $error: expr) =>
+    {
+        $manager.add_error(Box::new($error))
+    };
 }
 
 pub (crate) use push_error;

@@ -12,7 +12,7 @@ pub fn parse_scope(expression: &str, line_number: usize, error_manager: &mut Err
     }
     else {return Ok((None, None));}
 
-    let expression_type_result = get_expression_type(exp, line_number, error_manager);
+    let expression_type_result = get_expression_type(exp);
     let expression_type = expression_type_result.clone().unwrap_or(ExpressionType::None);
 
     if let Err(message) = &expression_type_result

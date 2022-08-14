@@ -41,7 +41,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
         }
         else {continue;}
 
-        let expression_type_result = utility::get_expression_type(exp, line_start+i, error_manager);
+        let expression_type_result = utility::get_expression_type(exp);
         let expression_type = expression_type_result.clone().unwrap_or(ExpressionType::None);
 
         if let Err(message) = &expression_type_result
@@ -52,7 +52,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
 
         if inside_scope
         {
-            if utility::expression_is_scope(exp, line_start+i, error_manager)
+            if utility::expression_is_scope(exp)
             {
                 scope_count += 1;
             }
@@ -97,7 +97,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
         else
         {            
             // Scope change (if/loop).
-            if utility::expression_is_scope(exp, line_start+i, error_manager)
+            if utility::expression_is_scope(exp)
             {
                 scope_start = i;
                 inside_scope = true;
@@ -201,7 +201,17 @@ fn parse_call(call: &str) -> Result<(String, Vec<String>), String>
     {
         function = first.0.to_string();
         
-        arguments = utility::split_by(&first.1[0..first.1.len()-1], ',');
+        match utility::split_by(&first.1[0..first.1.len()-1], ',')
+        {
+            Ok(result) =>
+            {
+                arguments = result;
+            }
+            Err(error) =>
+            {
+                return Err(error);
+            }
+        }
     }
     else
     {

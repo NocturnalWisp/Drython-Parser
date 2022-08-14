@@ -6,7 +6,7 @@ use crate::drython::types::error::*;
 
 // recursive function that runs the operation from the reverse polish notation.
 pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
-    vars: &HashMap<String, Token>, error_manager: &mut ErrorManager) -> Option<Token>
+    vars: &HashMap<String, Token>, error_args: &mut RuntimeErrorArguments) -> Option<Token>
 {
     let mut stack: Vec<Token> = vec![];
 
@@ -19,8 +19,8 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
 
             if let (Some(unhandled1), Some(unhandled2)) = (&first, &second)
             {
-                let handled_1 = handle_token_type(runner, unhandled1, vars, error_manager);
-                let handled_2 = handle_token_type(runner, unhandled2, vars, error_manager);
+                let handled_1 = handle_token_type(runner, unhandled1, vars, error_args);
+                let handled_2 = handle_token_type(runner, unhandled2, vars, error_args);
 
                 // Run operations based on whether the token has been handled or not.
                 if let Some(result) = match (handled_1, handled_2)
@@ -45,7 +45,7 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
     if let Some(token) = stack.pop()
     {
         // Secondary handle in case it was a single token and not a full operation.
-        if let Some(handled_token) = handle_token_type(runner, &token, vars, error_manager)
+        if let Some(handled_token) = handle_token_type(runner, &token, vars, error_args)
         {
             return Some(handled_token);
         }
@@ -58,7 +58,7 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
     None
 }
 
-fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Token>, error_manager: &mut ErrorManager) -> Option<Token>
+fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Token>, error_args: &mut RuntimeErrorArguments) -> Option<Token>
 {
     match token
     {
@@ -67,11 +67,25 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
             // Parse arguments and run them recursively.
             let mut parsed_args: Vec<Token> = Vec::new();
 
-            for arg in utility::split_by(args, ',')
+            match utility::split_by(args, ',')
             {
-                if let Some(ran_token) = run_operation(runner, &operation_parser::parse_operation(&arg, error_manager, 0), vars, error_manager)
+                Ok(result) =>
                 {
-                    parsed_args.push(ran_token);
+                    for arg in result
+                    {
+                        if let Some(ran_token) = 
+                            run_operation(runner,
+                                &operation_parser::parse_operation(&arg, &mut error_args.2, 0),
+                                vars, error_args
+                            )
+                        {
+                            parsed_args.push(ran_token);
+                        }
+                    }
+                }
+                Err(error) =>
+                {
+                    push_error!(error_args.2, RuntimeError::new(error_args.0, error_args.1.clone(), error.as_str()));
                 }
             }
             
@@ -89,7 +103,7 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
         Token::Operation(op) =>
         {
             // Run operation recursively.
-            return run_operation(runner, op, vars, error_manager);
+            return run_operation(runner, op, vars, error_args);
         },
         Token::Var(name) =>
         {
@@ -113,7 +127,7 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
 
             for item in items
             {
-                if let Some(token_result) = handle_token_type(runner, item, vars, error_manager)
+                if let Some(token_result) = handle_token_type(runner, item, vars, error_args)
                 {
                     new_items.push(token_result);
                 }
@@ -127,8 +141,8 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
         },
         Token::Accessor(prev_token, accessor) =>
         {
-            let handled_accessor = handle_token_type(runner, accessor, vars, error_manager);
-            match handle_token_type(runner, prev_token, vars, error_manager)
+            let handled_accessor = handle_token_type(runner, accessor, vars, error_args);
+            match handle_token_type(runner, prev_token, vars, error_args)
             {
                 Some(Token::Collection(collection)) =>
                 {
@@ -137,7 +151,7 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                         Some(Token::Int(i)) =>
                         {
                             let token = &collection[i as usize];
-                            if let Some(result) = handle_token_type(runner, token, vars, error_manager)
+                            if let Some(result) = handle_token_type(runner, token, vars, error_args)
                             {
                                 return Some(result);
                             }
@@ -155,11 +169,11 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                     {
                         Some(Token::String(accessor_str)) =>
                         {
-                            return handle_token_type(runner, &Token::Var(format!("{}.{}", value, accessor_str.clone())), vars, error_manager);
+                            return handle_token_type(runner, &Token::Var(format!("{}.{}", value, accessor_str.clone())), vars, error_args);
                         }
-                        Some(Token::Call(function_name, args)) =>
+                        Some(Token::Call(name, args)) =>
                         {
-                            return handle_token_type(runner, &Token::Call(format!("{}.{}", value, function_name), args), vars, error_manager);
+                            return handle_token_type(runner, &Token::Call(format!("{}.{}", value, name), args), vars, error_args);
                         }
                         _ => { return None; }
                     }

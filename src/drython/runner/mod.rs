@@ -76,7 +76,8 @@ impl Runner
         // Register all variables.
         for var in &self.parser.global_expressions.single_op
         {
-            let operation = run_operation(self, &var.1.1, &HashMap::new(), error_manager);
+            //TODO: Find a way to inject the proper line number.
+            let operation = run_operation(self, &var.1.1, &HashMap::new(), &mut (0, None, error_manager));
 
             if let Some(result) = operation
             {
@@ -126,21 +127,31 @@ impl Runner
             let mut arg_vars: HashMap<String, Token> = HashMap::new();
             if let Some(expected_args) = &function.1.scope_info.1
             {
-                let mut parsed_arg_names: Vec<String> = utility::split_by(expected_args, ',');
-
-                for i in 0..parsed_arg_names.len()
+                match utility::split_by(expected_args, ',')
                 {
-                    arg_vars.insert(
-                        parsed_arg_names.pop().unwrap_or("null".to_string()),
-                        arguments[i].clone()
-                    );
+                    Ok(mut parsed_arg_names) =>
+                    {
+                        for i in 0..parsed_arg_names.len()
+                        {
+                            arg_vars.insert(
+                                parsed_arg_names.pop().unwrap_or("null".to_string()),
+                                arguments[i].clone()
+                            );
+                        }
+                    }
+                    Err(error) =>
+                    {
+                        //TODO: Figure out a way to inject the line number to the error.
+                        push_error!(error_manager, RuntimeError::new(0, Some(function_name.to_string()), error.as_str()));
+                    }
                 }
             }
 
             scope_vars.extend(self.vars.clone());
             scope_vars.extend(arg_vars);
 
-            return_result = self.handle_scope(function.1, &mut scope_vars, false, &mut error_manager);
+            //TODO: Line injection
+            return_result = self.handle_scope(function.1, &mut scope_vars, false, &mut (0, Some(function_name.to_string()), &mut error_manager));
         }
 
         return_result
@@ -148,7 +159,7 @@ impl Runner
 
     // Resursive function to handle calling order in internal scopes.
     // Originally called by call_internal for a parsed function.
-    fn handle_scope(&self, function: &ExpressionList, vars: &mut HashMap<String, Token>, is_loop: bool, error_manager: &mut ErrorManager) -> Option<Token>
+    fn handle_scope(&self, function: &ExpressionList, vars: &mut HashMap<String, Token>, is_loop: bool, errors_args: &mut RuntimeErrorArguments) -> Option<Token>
     {
         let mut return_result: Option<Token> = None;
         
@@ -165,7 +176,7 @@ impl Runner
                 _ if function.single_op.contains_key(&i) =>
                 {
                     let expression = &function.single_op[&i];
-                    let operation = run_operation(self, &expression.1, &vars, error_manager);
+                    let operation = run_operation(self, &expression.1, &vars, errors_args);
 
                     match expression.0.as_str()
                     {
@@ -220,7 +231,7 @@ impl Runner
 
                     for tokens in expression.1.iter()
                     {
-                        if let Some(token) = run_operation(self, &tokens, &vars, error_manager)
+                        if let Some(token) = run_operation(self, &tokens, &vars, errors_args)
                         {
                             args.push(token);
                         }
@@ -241,11 +252,11 @@ impl Runner
                                 if let Some(if_op) = &function.scope_info.1
                                 {
                                     // Only handle scope if the "if operation" is true.
-                                    let operation = parse_operation(if_op, error_manager, 0);
+                                    let operation = parse_operation(if_op, errors_args.2, 0);
 
-                                    if let Some(Token::Bool(true)) = run_operation(self, &operation, &vars, error_manager)
+                                    if let Some(Token::Bool(true)) = run_operation(self, &operation, &vars, errors_args)
                                     {
-                                        return_result = self.handle_scope(function, vars, is_loop, error_manager);
+                                        return_result = self.handle_scope(function, vars, is_loop, errors_args);
                                         previous_if_failed = false;
                                     }
                                     else
@@ -262,11 +273,11 @@ impl Runner
                                     if let Some(if_op) = &function.scope_info.1
                                     {
                                         // Only handle scope if the "elif operation" is true.
-                                        let operation = parse_operation(if_op, error_manager, 0);
+                                        let operation = parse_operation(if_op, errors_args.2, 0);
 
-                                        if let Some(Token::Bool(true)) = run_operation(self, &operation, &vars, error_manager)
+                                        if let Some(Token::Bool(true)) = run_operation(self, &operation, &vars, errors_args)
                                         {
-                                            return_result = self.handle_scope(function, vars, is_loop, error_manager);
+                                            return_result = self.handle_scope(function, vars, is_loop, errors_args);
                                             previous_if_failed = false;
                                         }
                                         else
@@ -281,14 +292,14 @@ impl Runner
                             {
                                 if previous_if_failed
                                 {
-                                    return_result = self.handle_scope(function, vars, is_loop, error_manager);
+                                    return_result = self.handle_scope(function, vars, is_loop, errors_args);
                                 }
                             },
                             "loop" =>
                             {
                                 loop
                                 {
-                                    return_result = self.handle_scope(function, vars, true, error_manager);
+                                    return_result = self.handle_scope(function, vars, true, errors_args);
 
                                     if let Some(Token::Break) = return_result
                                     {
@@ -301,12 +312,12 @@ impl Runner
                                     }
                                 }
                             }
-                            _ => return_result = self.handle_scope(function, vars, is_loop, error_manager)
+                            _ => return_result = self.handle_scope(function, vars, is_loop, errors_args)
                         }
                     }
                     else
                     {
-                        return_result = self.handle_scope(function, vars, is_loop, error_manager);
+                        return_result = self.handle_scope(function, vars, is_loop, errors_args);
                     }
                 },
                 _ => ()

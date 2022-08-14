@@ -170,38 +170,46 @@ pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line
                 {
                     if inner_collection_count == 0
                     {
-                        let collection_operations = utility::split_by(&string[token_start..token_end], ',').iter()
-                            // Use map to make sure multi-operations are kept in a Token::Operation.
-                            .map(|x| {
-                                let operation = parse_operation(x, error_manager, line_number);
+                        match utility::split_by(&string[token_start..token_end], ',')
+                        {
+                            Ok(result) =>
+                            {
+                                // Use map to make sure multi-operations are kept in a Token::Operation.
+                                let collection_operations = result.iter().map(|x| {
+                                    let operation = parse_operation(x, error_manager, line_number);
 
-                                match operation.len()
+                                    match operation.len()
+                                    {
+                                        0 => Token::Null,
+                                        1 => operation[0].clone(),
+                                        _ => Token::Operation(operation)
+                                    }
+                                }).collect::<Vec<Token>>();
+                                 
+                                let token = Token::Collection(collection_operations);
+                                // Check if using an accessor after this call.
+                                if string.len() >= i+2 && &string[i+1..i+2] == "."
                                 {
-                                    0 => Token::Null,
-                                    1 => operation[0].clone(),
-                                    _ => Token::Operation(operation)
+                                    current_accessor_token = token;
+                                    
+                                    last_token_type = ParseTokenType::None;
+                                    token_start = i+2;
+                                    token_end = i+3;
                                 }
-                            }).collect::<Vec<Token>>();
-                        
-                        let token = Token::Collection(collection_operations);
-                        // Check if using an accessor after this call.
-                        if string.len() >= i+2 && &string[i+1..i+2] == "."
-                        {
-                            current_accessor_token = token;
-                            
-                            last_token_type = ParseTokenType::None;
-                            token_start = i+2;
-                            token_end = i+3;
+                                else
+                                {
+                                    tokens_ptr.push(token);
+            
+                                    last_token_type = ParseTokenType::None;
+                                    token_start = i;
+                                }
+                            }
+                            Err(error) =>
+                            {
+                                push_error!(error_manager, ParseError::new(line_number, error.as_str()));
+                            }
                         }
-                        else
-                        {
-                            tokens_ptr.push(token);
-    
-                            last_token_type = ParseTokenType::None;
-                            token_start = i;
-                        }
-
-                        continue;
+                                               continue;
                     }
                     else
                     {

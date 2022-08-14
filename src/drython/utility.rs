@@ -1,6 +1,6 @@
 use crate::drython::types::error::*;
 
-pub fn get_expression_type(string: &str, line_number: usize, error_manager: &mut ErrorManager) -> Result<ExpressionType, String>
+pub fn get_expression_type(string: &str) -> Result<ExpressionType, String>
 {
     let mut buffer = String::new();
     let mut started_call_or_function = false;
@@ -84,9 +84,9 @@ pub enum ExpressionType
     End,
 }
 
-pub fn expression_is_scope(string: &str, line_number: usize, error_manager: &mut ErrorManager) -> bool
+pub fn expression_is_scope(string: &str) -> bool
 {
-    match get_expression_type(string, line_number, error_manager)
+    match get_expression_type(string)
     {
         Ok(ExpressionType::Function) => true,
         Ok(ExpressionType::If) => true,
@@ -97,7 +97,7 @@ pub fn expression_is_scope(string: &str, line_number: usize, error_manager: &mut
 
 // Allows for splitting operations by comma.
 // Avoids internal calls and scopes.
-pub fn split_by(string: &str, split: char) -> Vec<String>
+pub fn split_by(string: &str, split: char) -> Result<Vec<String>, String>
 {
     let mut result: Vec<String> = Vec::new();
 
@@ -123,10 +123,19 @@ pub fn split_by(string: &str, split: char) -> Vec<String>
         }
 
         // If in count is ever less than 0, there is a bracket in excess.
-        //TODO: Throw an error.
+        if in_count < 0
+        {
+            return Err(format!("Excess '{}' found. Make sure to properly enclose your statements.", c));
+        }
     }
 
-    result
+    // Too few brackets found.
+    if in_count > 0
+    {
+        return Err(format!("Too few brackets/parenthises found. Make sure to enclose your expressions correctly."));
+    }
+
+    Ok(result)
 }
 
 pub const OPERATIONS: [&str; 14] = [
