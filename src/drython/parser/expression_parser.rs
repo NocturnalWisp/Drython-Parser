@@ -57,9 +57,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                 scope_count += 1;
             }
 
-            let exp_lower = exp.to_lowercase();
-
-            if expression_type == ExpressionType::End || exp_lower.starts_with("elif") || exp_lower.starts_with("elseif")  || exp_lower.starts_with("else")
+            if expression_type == ExpressionType::End || expression_type == ExpressionType::Elif || expression_type == ExpressionType::Else
             {
                 if scope_count == 0
                 {
@@ -77,7 +75,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
 
                     internal_expressions.insert(operation_index, internal_expression);
 
-                    if exp_lower.starts_with("elif") || exp_lower.starts_with("elseif") || exp_lower.starts_with("else")
+                    if expression_type == ExpressionType::Elif || expression_type == ExpressionType::Else
                     {
                         scope_start = i;
                     }
@@ -88,10 +86,28 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
 
                     operation_index += 1;
                 }
-                else if exp_lower == "end"
+                else if expression_type == ExpressionType::End
                 {
                     scope_count -= 1;
+
+                    // Handle error when reached end of expression but no 'end' in sight.
+                    // But still within a scope.
+                    if scope_count > 0 && line_start+i == expressions.len()-1
+                    {
+                        println!("bananananana: {}", exp);
+                        push_error!(error_manager, 
+                            ParseError::new(line_start+i,
+                                format!("Scope starting at '{}' was not closed with an 'end' statement.", &expressions[scope_start].split_once(")").unwrap().1).as_str()));
+                    }
                 }
+            }
+            // Handle error when reached end of expression but no 'end' in sight.
+            else if expression_type != ExpressionType::If && line_start+i == expressions.len()-1
+            {
+                println!("bananananana: {}", exp);
+                push_error!(error_manager, 
+                    ParseError::new(line_start+i,
+                        format!("Scope starting at '{}' was not closed with an 'end' statement.", &expressions[scope_start].split_once(")").unwrap().1).as_str()));
             }
         }
         else
@@ -177,6 +193,11 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                 
                 includes.push(library.to_string());
             }
+            else if expression_type == ExpressionType::End
+            {
+                push_error!(error_manager, ParseError::new(line_start+i, "Too many 'end' statements are present."));
+            }
+
         }
     }
 

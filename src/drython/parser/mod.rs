@@ -33,13 +33,14 @@ impl Parser
             return Err(s);
         }
 
-        println!("{}", contents);
 
         // Allow multiple lines using '\'
         contents = contents.replace("\\\r\n", "");
 
         let lines: Vec<String> = 
             Parser::handle_content_replace(&contents, error_manager);
+
+        println!("{:?}", lines);
 
         // Determining Script Type.
         let first_line = &lines[0][2..].trim_end_matches(";");

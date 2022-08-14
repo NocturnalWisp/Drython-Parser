@@ -144,8 +144,7 @@ pub const OPERATIONS: [&str; 14] = [
     ">", "<", "<=", ">=", "==", "!="
 ];
 
-/// Determines whether the passed char can be found within the allowed operations array.
-/// Short-circuiting function.
+// Determines whether the passed char can be found within the allowed operations array.
 pub fn operations_contains(c: char) -> bool
 {
     return OPERATIONS.iter().any(|x| x.contains(c));
