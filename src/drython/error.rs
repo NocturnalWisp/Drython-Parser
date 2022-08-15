@@ -42,6 +42,7 @@ macro_rules! push_error
     };
 }
 
+
 pub (crate) use push_error;
 
 // For parser
@@ -77,6 +78,17 @@ impl DrythonError for ParseError
         format!("Drython Parse Error: Line [{}] - {}", self.location, self.message)
     }
 }
+
+#[macro_export]
+macro_rules! parse_error
+{
+    ($manager: ident, $line_number: expr, $message: expr) =>
+    {
+        push_error!($manager, ParseError::new($line_number, $message));
+    };
+}
+
+pub (crate) use parse_error;
 
 pub struct ScriptTypeError
 {

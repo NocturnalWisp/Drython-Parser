@@ -67,7 +67,7 @@ pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line
                 // Follow the "a encounters b" pattern.
                 let skip_current = match (&last_token_type, &current_char_type)
                 {
-                    (PTT::Value, PTT::StringLiteral) => false,
+                    (PTT::Value, PTT::StringLiteral) => {parse_error!(error_manager, line_number, "Unexpected string literal after value."); false},
                     (PTT::Value, PTT::Collection) => false,
                     (PTT::Value, PTT::Operator) => false,
                     (PTT::Value, PTT::Parenth) => false,

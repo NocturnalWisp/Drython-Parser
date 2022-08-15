@@ -1,7 +1,9 @@
 System
 
-callme(aaa):
-    print(1 + 1 + '1')
-    if 1 == true
+callme():
+    if 1 == 2:
+        print("brngf")
+    else if 2 == 2:
+        print("bananans")
     end
 end

@@ -14,7 +14,7 @@ pub fn register_vars(variables: &mut Vec<RegisteredVariable>)
 fn print(args: Vec<Token>) -> Option<Token>
 {
     if args.len() != 1 { return None; }
-    
+
     match &args[0]
     {
         Token::Int(i) => println!("{}", i),

@@ -49,7 +49,7 @@ impl Parser
         }
 
         // Parse global expressions.
-        let global_expressions = parse_expressions(&lines[1..].to_vec(), 2, error_manager);
+        let global_expressions = parse_expressions(&lines[1..].to_vec(), 2, error_manager, false);
 
         Ok(Parser
         {
@@ -63,6 +63,8 @@ impl Parser
     {
         let mut new_string: Vec<String> = Vec::new();
 
+        let mut string_finished = false;
+
         for (index, line) in string.lines().enumerate()
         {
             // Remove all empty spaces except when in string literal.
@@ -75,6 +77,8 @@ impl Parser
                 if c == ';'
                 {
                     new_string.push(format!("{}){}", index+1, new_line));
+                    string_finished = true;
+
                     new_line = String::new();
 
                     if in_string_literal
@@ -84,6 +88,8 @@ impl Parser
                     in_string_literal = false;
                     continue;
                 }
+
+                string_finished = false;
 
                 // Don't include white space unless in string literal.
                 if (!c.is_whitespace()) || in_string_literal
@@ -97,7 +103,10 @@ impl Parser
                 }
             }
 
-            new_string.push(format!("{}){}", index+1, new_line));
+            if !string_finished
+            {
+                new_string.push(format!("{}){}", index+1, new_line));
+            }
         }
     
         new_string

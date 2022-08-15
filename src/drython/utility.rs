@@ -19,7 +19,8 @@ pub fn get_expression_type(string: &str) -> Result<ExpressionType, String>
         return Ok(ExpressionType::Comment);
     }
 
-    for c in string.chars()
+    let mut peekable = string.chars().peekable();
+    while let Some(c) = peekable.next()
     {
         if !started_call_or_function
         {
@@ -28,16 +29,17 @@ pub fn get_expression_type(string: &str) -> Result<ExpressionType, String>
                 c if c.is_alphanumeric() || c == '.' => buffer.push(c),
                 '=' => return Ok(ExpressionType::Assignment),
                 '(' => started_call_or_function = true,
+                c if operations_contains(c) => (),
+                '"' | '\'' | ')' => (),
                 _ => return Err(format!("Failed to recognize character: '{}'", c))
             }
         }
         // Check for the end of a function creation.
         else
         {
-            match c
+            if let ':' = c
             {
-                ':' => return Ok(ExpressionType::Function),
-                _ => ()
+                return Ok(ExpressionType::Function);
             }
         }
 
@@ -48,7 +50,7 @@ pub fn get_expression_type(string: &str) -> Result<ExpressionType, String>
             "loop" => return Ok(ExpressionType::Loop),
             "if" => return Ok(ExpressionType::If),
             "elif"|"elseif" => return Ok(ExpressionType::Elif),
-            "else" => return Ok(ExpressionType::Else),
+            "else" => {if let Some('i') = peekable.peek() {} else { return Ok(ExpressionType::Else)}},
             "return" => return Ok(ExpressionType::Return),
             "use"|"import"|"include"|"using" => return Ok(ExpressionType::Library),
             _ => ()
@@ -62,7 +64,7 @@ pub fn get_expression_type(string: &str) -> Result<ExpressionType, String>
         return Ok(ExpressionType::Call);
     }
 
-    Err("Unkown Expression".to_string())
+    Err("Unkown expression.".to_string())
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -84,13 +86,13 @@ pub enum ExpressionType
     End,
 }
 
-pub fn expression_is_scope(string: &str) -> bool
+pub fn expression_is_scope(expression_type: &ExpressionType) -> bool
 {
-    match get_expression_type(string)
+    match expression_type
     {
-        Ok(ExpressionType::Function) => true,
-        Ok(ExpressionType::If) => true,
-        Ok(ExpressionType::Loop) => true,
+        ExpressionType::Function => true,
+        ExpressionType::If => true,
+        ExpressionType::Loop => true,
         _ => false
     }
 }

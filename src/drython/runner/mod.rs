@@ -49,16 +49,27 @@ impl Runner
         // Include libs
         for library in &self.parser.global_expressions.includes
         {
-            let mut lib = external::get_lib(library);
+            let library = external::get_lib(library);
 
-            while let Some(function) = lib.0.pop()
+            match library
             {
-                self.external_functions.insert(function.0.clone(), function.1);
-            }
+                Ok(mut lib) =>
+                {
+                    while let Some(function) = lib.0.pop()
+                    {
+                        self.external_functions.insert(function.0.clone(), function.1);
+                    }
 
-            while let Some(var) = lib.1.pop()
-            {
-                self.vars.insert(var.0.clone(), var.1.clone());
+                    while let Some(var) = lib.1.pop()
+                    {
+                        self.vars.insert(var.0.clone(), var.1.clone());
+                    }
+                },
+                Err(error) =>
+                {
+                    //TODO: Inject line number.
+                    push_error!(error_manager, RuntimeError::new(0, None, error.as_str()));
+                }
             }
         }
 
@@ -96,15 +107,19 @@ impl Runner
 
             return result.0;
         }
-
-        if self.external_functions.contains_key(function_name)
+        else if self.external_functions.contains_key(function_name)
         {
             if let Some(call) = &self.external_functions[function_name]
             {
                 return call(args);
             }
         }
-
+        else
+        {
+            //TODO: Inject line number.
+            push_error!(error_manager, RuntimeError::new(0, Some(function_name.to_string()), format!("No function called '{}' exists.", function_name).as_str()));
+        }
+        
         None
     }
 
@@ -139,7 +154,6 @@ impl Runner
                         {
                             for i in 0..parsed_arg_names.len()
                             {
-                                println!("{:#?}", parsed_arg_names);
                                 arg_vars.insert(
                                     parsed_arg_names.pop().unwrap_or("null".to_string()),
                                     arguments[i].clone()

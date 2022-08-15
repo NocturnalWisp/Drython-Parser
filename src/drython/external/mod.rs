@@ -58,7 +58,7 @@ impl PartialEq<Token> for IsToken
     }
 }
 
-pub fn get_lib(lib: &str) -> (Vec<RegisteredFunction>, Vec<RegisteredVariable>)
+pub fn get_lib(lib: &str) -> Result<(Vec<RegisteredFunction>, Vec<RegisteredVariable>), String>
 {
     let mut functions: Vec<RegisteredFunction> = Vec::new();
     let mut vars: Vec<RegisteredVariable> = Vec::new();
@@ -67,10 +67,10 @@ pub fn get_lib(lib: &str) -> (Vec<RegisteredFunction>, Vec<RegisteredVariable>)
     {
         "vector" => { vector::register_functs(&mut functions); vector::register_vars(&mut vars); },
         "math" => { math::register_functs(&mut functions); math::register_vars(&mut vars); },
-        _ => ()
+        _ => { return Err(format!("No library found with the name: {}", lib)); }
     };
 
-    (functions, vars)
+    Ok((functions, vars))
 }
 
 // These functions allow for extracting and expecting a specific token
