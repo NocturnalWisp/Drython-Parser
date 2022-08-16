@@ -88,7 +88,6 @@ impl Runner
         {
             let operation = run_operation(self, &var.1.1, &HashMap::new(), error_manager, var.1.2);
 
-            //TODO: Handle error
             match operation
             {
                 Ok(Some(result)) =>
