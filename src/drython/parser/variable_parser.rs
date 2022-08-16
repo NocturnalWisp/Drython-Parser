@@ -6,7 +6,7 @@ pub fn parse_var(line: &str) -> Result<(String, String), String>
 
     if split.len() !=2
     {
-        return Err("Failed to parse variable:".to_string());
+        return Err("Failed to parse variable assignment.".to_string());
     }
 
     var.0 = split[0].to_string();

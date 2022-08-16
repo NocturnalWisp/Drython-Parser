@@ -1,4 +1,4 @@
-use std::{collections::VecDeque};
+use std::collections::VecDeque;
 
 use crate::drython::types::Token;
 
@@ -67,10 +67,14 @@ pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line
                 // Follow the "a encounters b" pattern.
                 let skip_current = match (&last_token_type, &current_char_type)
                 {
-                    (PTT::Value, PTT::StringLiteral) => {parse_error!(error_manager, line_number, "Unexpected string literal after value."); false},
-                    (PTT::Value, PTT::Collection) => false,
+                    (PTT::Value, PTT::StringLiteral) =>
+                        {parse_error!(error_manager, line_number, "Unexpected string literal after value type."); break;},
+                    (PTT::Value, PTT::Collection) =>
+                        {parse_error!(error_manager, line_number, "Unexpected collection after value type."); break;},
                     (PTT::Value, PTT::Operator) => false,
                     (PTT::Value, PTT::Parenth) => false,
+                    (PTT::Value, PTT::Accessor) =>
+                        if string[token_start..token_end].chars().all(|c| c.is_numeric()) { true } else { false },
 
                     (PTT::Operator, PTT::Value) => false,
                     (PTT::Operator, PTT::StringLiteral) => false,
@@ -78,13 +82,12 @@ pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line
                     (PTT::Operator, PTT::Parenth) => false,
                     
                     (PTT::StringLiteral, PTT::StringLiteral) => false,
-                    (PTT::Parenth, PTT::Parenth) => false,
-                    (PTT::Call, PTT::Parenth) => false,
+
                     (PTT::Collection, PTT::Collection) => false,
 
-                    (PTT::Value, PTT::Accessor) => if string[token_start..token_end].chars().all(|c| c.is_numeric()) { true } else { false },
-                    (PTT::StringLiteral, PTT::Accessor) => false,
-                    (PTT::Collection, PTT::Accessor) => false,
+                    (PTT::Parenth, PTT::Parenth) => false,
+
+                    (PTT::Call, PTT::Parenth) => false,
 
                     (PTT::Accessor, PTT::Accessor) => false,
                     (PTT::Accessor, PTT::Collection) => false,
@@ -153,7 +156,7 @@ pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line
                 }
                 else
                 {
-                    //TODO: Throw error that the operator doesn't exist.
+                    parse_error!(error_manager, line_number, format!("{} Operation was not recognized.", found_operator).as_str());
                 }
 
                 last_token_type = ParseTokenType::None;
@@ -398,7 +401,11 @@ pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line
     // If still in parenthises, there is an error.
     if inner_parenth_count > 0
     {
-        //TODO: warning_list.push("Failed to parse operation.\nClosing parentheses not found.");
+        parse_error!(error_manager, line_number, "Parenthesis were not closed during operation.");
+    }
+    else if inner_parenth_count < 0
+    {
+        parse_error!(error_manager, line_number, "Too many closing parenthesis found.");
     }
     
     // Handle operation order and populating.
