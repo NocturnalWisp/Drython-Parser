@@ -6,7 +6,7 @@ use crate::drython::types::error::*;
 
 // recursive function that runs the operation from the reverse polish notation.
 pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
-    vars: &HashMap<String, Token>, error_args: &mut RuntimeErrorArguments) -> Option<Token>
+    vars: &HashMap<String, Token>, error_manager: &mut ErrorManager, line_number: usize) -> Result<Option<Token>, String>
 {
     let mut stack: Vec<Token> = vec![];
 
@@ -19,11 +19,21 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
 
             if let (Some(unhandled1), Some(unhandled2)) = (&first, &second)
             {
-                let handled_1 = handle_token_type(runner, unhandled1, vars, error_args);
-                let handled_2 = handle_token_type(runner, unhandled2, vars, error_args);
+                let handled_1 = handle_token_type(runner, unhandled1, vars, error_manager, line_number);
+                let handled_2 = handle_token_type(runner, unhandled2, vars, error_manager, line_number);
+
+                if let Err(error) = handled_1
+                {
+                    return Err(error);
+                }
+                if let Err(error) = handled_2
+                {
+                    return Err(error);
+                }
 
                 // Run operations based on whether the token has been handled or not.
-                if let Some(result) = match (handled_1, handled_2)
+                // Unwrap because errors automatically return from this function before.
+                if let Some(result) = match (handled_1.unwrap(), handled_2.unwrap())
                 {
                     (Some(token1), Some(token2)) => run_operation_by_type(&token1, &token2, operator),
                     (None, Some(token2)) => run_operation_by_type(unhandled1, &token2, operator),
@@ -45,20 +55,29 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
     if let Some(token) = stack.pop()
     {
         // Secondary handle in case it was a single token and not a full operation.
-        if let Some(handled_token) = handle_token_type(runner, &token, vars, error_args)
+        match handle_token_type(runner, &token, vars, error_manager, line_number)
         {
-            return Some(handled_token);
-        }
-        else
-        {
-            return Some(token);
+            Ok(Some(result)) =>
+            {
+                Ok(Some(result))
+            }
+            Ok(None) =>
+            {
+                Ok(Some(token))
+            }
+            Err(error) =>
+            {
+                Err(error)
+            }
         }
     }
-
-    None
+    else
+    {
+            Err("Failed to parse operation. Try breaking down the statement into steps.".to_string())
+    }
 }
 
-fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Token>, error_args: &mut RuntimeErrorArguments) -> Option<Token>
+fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Token>, error_manager: &mut ErrorManager, line_number: usize) -> Result<Option<Token>, String>
 {
     match token
     {
@@ -73,11 +92,8 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                 {
                     for arg in result
                     {
-                        if let Some(ran_token) = 
-                            run_operation(runner,
-                                &operation_parser::parse_operation(&arg, &mut error_args.2, 0),
-                                vars, error_args
-                            )
+                        if let Ok(Some(ran_token)) = 
+                            run_operation(runner, &operation_parser::parse_operation(&arg, error_manager, line_number), vars, error_manager, line_number)
                         {
                             parsed_args.push(ran_token);
                         }
@@ -85,25 +101,25 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                 }
                 Err(error) =>
                 {
-                    push_error!(error_args.2, RuntimeError::new(error_args.0, error_args.1.clone(), error.as_str()));
+                    return Err(error);
                 }
             }
             
-            let call_result = runner.call_function(name, parsed_args, error_args.2);
+            let call_result = runner.call_function(name, parsed_args, error_manager);
             
             if let None = call_result
             {
-                return Some(token.clone());
+                return Ok(Some(token.clone()));
             }
             else
             {
-                return call_result;
+                return Ok(call_result);
             }
         },
         Token::Operation(op) =>
         {
             // Run operation recursively.
-            return run_operation(runner, op, vars, error_args);
+            return run_operation(runner, op, vars, error_manager, line_number);
         },
         Token::Var(name) =>
         {
@@ -116,10 +132,10 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
             }
             else
             {
-                var = Token::String(name.clone());
+                return Err(format!("Could not find a variable by the name: {}", name));
             }
 
-            return Some(var);
+            return Ok(Some(var));
         },
         Token::Collection(items) =>
         {
@@ -127,7 +143,7 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
 
             for item in items
             {
-                if let Some(token_result) = handle_token_type(runner, item, vars, error_args)
+                if let Ok(Some(token_result)) = handle_token_type(runner, item, vars, error_manager, line_number)
                 {
                     new_items.push(token_result);
                 }
@@ -137,54 +153,128 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                 }
             }
 
-            return Some(Token::Collection(new_items));
+            return Ok(Some(Token::Collection(new_items)));
         },
         Token::Accessor(prev_token, accessor) =>
         {
-            let handled_accessor = handle_token_type(runner, accessor, vars, error_args);
-            match handle_token_type(runner, prev_token, vars, error_args)
+            let handled_accessor = handle_token_type(runner, accessor, vars, error_manager, line_number);
+            match handle_token_type(runner, prev_token, vars, error_manager, line_number)
             {
-                Some(Token::Collection(collection)) =>
+                Ok(Some(Token::Collection(collection))) =>
                 {
                     match handled_accessor
                     {
-                        Some(Token::Int(i)) =>
+                        Ok(Some(Token::Int(i))) =>
                         {
                             let token = &collection[i as usize];
-                            if let Some(result) = handle_token_type(runner, token, vars, error_args)
+                            if let Ok(Some(result)) = handle_token_type(runner, token, vars, error_manager, line_number)
                             {
-                                return Some(result);
+                                return Ok(Some(result));
                             }
                             else
                             {
-                                return Some(token.clone());
+                                return Ok(Some(token.clone()));
                             }
                         }
-                        _ => { return None; }
+                        Ok(None) =>
+                        {
+                            if let Token::Int(i) = &**accessor
+                            {
+                                let token = &collection[*i as usize];
+                                if let Ok(Some(result)) = handle_token_type(runner, token, vars, error_manager, line_number)
+                                {
+                                    return Ok(Some(result));
+                                }
+                                else
+                                {
+                                    return Ok(Some(token.clone()));
+                                }
+                            }
+                            else
+                            {
+                                return Ok(None);
+                            }
+                        }
+                        Err(error) =>
+                        {
+                            return Err(error);
+                        }
+                        _ => { return Ok(None); }
                     }
                 },
-                Some(Token::String(value)) =>
+                Ok(Some(Token::String(value))) =>
                 {
                     match handled_accessor
                     {
-                        Some(Token::String(accessor_str)) =>
+                        Ok(Some(Token::String(accessor_str))) =>
                         {
-                            return handle_token_type(runner, &Token::Var(format!("{}.{}", value, accessor_str.clone())), vars, error_args);
+                            return handle_token_type(runner, &Token::Var(format!("{}.{}", value, accessor_str.clone())), vars, error_manager, line_number);
                         }
-                        Some(Token::Call(name, args)) =>
+                        Ok(Some(Token::Call(name, args))) =>
                         {
-                            return handle_token_type(runner, &Token::Call(format!("{}.{}", value, name), args), vars, error_args);
+                            return handle_token_type(runner, &Token::Call(format!("{}.{}", value, name), args), vars, error_manager, line_number);
                         }
-                        _ => { return None; }
+                        Err(error) =>
+                        {
+                            return Err(error);
+                        }
+                        _ => { return Ok(None); }
                     }
                 }
-                _ => { return None; }
+                Ok(None) =>
+                {
+                    if let Token::String(value) = &**prev_token
+                    {
+                        match handled_accessor
+                        {
+                            Ok(Some(Token::Int(i))) =>
+                            {
+                                if (i as usize) < value.len() && i >= 0
+                                {
+                                    return Ok(Some(Token::String(value.as_str()[(i as usize)..((i+1) as usize)].to_string())));
+                                }
+                                else
+                                {
+                                    return Err("Tried to access a string index out of range.".to_string());
+                                }
+                            }
+                            Ok(None) =>
+                            {
+                                if let Token::Int(i) = &**accessor
+                                {
+                                    if (*i as usize) < value.len() && *i >= 0
+                                    {
+                                        return Ok(Some(Token::String(value.as_str()[(*i as usize)..((i+1) as usize)].to_string())));
+                                    }
+                                    else
+                                    {
+                                        return Err("Tried to access a string index out of range.".to_string());
+                                    }
+                                }
+                                else
+                                {
+                                    return Ok(None);
+                                }
+                            }
+                            Err(error) =>
+                            {
+                                return Err(error);
+                            }
+                            _ => { return Ok(None); }
+                        }
+                    }
+                    else
+                    {
+                        return Ok(None);
+                    }
+                }
+                _ => { return Ok(None); }
             }
 
             // Handle call.
 
         }
-        _ => { return None; }
+        _ => { return Ok(None); }
     }
 }
 

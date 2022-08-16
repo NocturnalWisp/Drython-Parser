@@ -43,9 +43,19 @@ pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line
     // Holds the token attached to an accessor.
     let mut current_accessor_token = Token::Null;
 
+    // Allows for skipping parsing of the next character in the loop.
+    // Currently used by string literals if they have an accessor emmediately after.
+    let mut skip_once = false;
+
     // Resurive check for parentheses
     for (i, c) in string.chars().enumerate()
     {
+        if skip_once
+        {
+            skip_once = false;
+            continue;
+        }
+
         let current_char_type =
         {
             if c.is_alphanumeric() { ParseTokenType::Value }
@@ -124,13 +134,21 @@ pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line
                 else
                 {
                     let token = parse_token_value(&string[token_start..token_end], is_literal);
-                    if used_accessor
+                    // Check for accessor on current char or after in the case of a string literal.
+                    if used_accessor || (is_literal && i+1 <string.len() && &string[i+1..i+2] == ".")
                     {
                         current_accessor_token = token;
                         
                         last_token_type = ParseTokenType::Accessor;
                         token_start = i+1;
                         token_end = i+1;
+
+                        if is_literal
+                        {
+                            token_start += 1;
+                            token_end += 1;
+                            skip_once = true;
+                        }
                     }
                     else
                     {
@@ -191,7 +209,7 @@ pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line
                                  
                                 let token = Token::Collection(collection_operations);
                                 // Check if using an accessor after this call.
-                                if string.len() >= i+2 && &string[i+1..i+2] == "."
+                                if string.len() >= i+1 && &string[i+1..i+2] == "."
                                 {
                                     current_accessor_token = token;
                                     
