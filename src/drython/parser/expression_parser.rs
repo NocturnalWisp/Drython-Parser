@@ -12,7 +12,7 @@ use scope_parser::parse_scope;
 
 use super::types::error::*;
 
-pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_manager: &mut ErrorManager, in_function: bool) -> ExpressionList
+pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_manager: &mut ErrorManager, in_expression: &ExpressionType, in_function: bool) -> ExpressionList
 {
     let mut single_op: HashMap<usize, (String, Vec<Token>)> = HashMap::new();
     let mut multi_ops: HashMap<usize, (String, Vec<Vec<Token>>)> = HashMap::new();
@@ -24,7 +24,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
     let mut inside_scope = false;
     let mut scope_start = 0;
     let mut scope_count = 0;
-    let mut scope_expression = ExpressionType::None;
+    let mut scope_expression = in_expression.clone();
 
     // The actual order index that each expression will use.
     // (i in the enumerate is unrealiable with nested blocks.)
@@ -76,6 +76,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                         &expressions[scope_start+1..i].to_vec(),
                         scope_start+1+line_start,
                         error_manager,
+                        &scope_expression,
                         true
                     );
 
@@ -95,6 +96,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                     else
                     {
                         inside_scope = false;
+                        scope_expression = ExpressionType::None;
                     }
 
                     operation_index += 1;
@@ -129,20 +131,34 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                 scope_start = i;
                 scope_expression = expression_type.clone();
                 inside_scope = true;
+
+                if i == expressions.len()-1
+                {
+                    push_error!(error_manager, 
+                        ParseError::new(line_start+i,
+                            format!("Scope starting at '{}' was not closed with an 'end' statement.", &expressions[scope_start].split_once(")").unwrap().1).as_str()));
+                }
             }
             // Return operation.
             else if expression_type == ExpressionType::Return
             {
-                match parse_return(exp)
+                if in_function
                 {
-                    Ok(statement) => 
+                    match parse_return(exp)
                     {
-                        let operation = operation_parser::parse_operation(statement, error_manager, line_start+i);
+                        Ok(statement) => 
+                        {
+                            let operation = operation_parser::parse_operation(statement, error_manager, line_start+i);
 
-                        single_op.insert(operation_index, ("return".to_string(), operation));
-                        operation_index += 1;
+                            single_op.insert(operation_index, ("return".to_string(), operation));
+                            operation_index += 1;
+                        }
+                        Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
                     }
-                    Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
+                }
+                else
+                {
+                    push_error!(error_manager, ParseError::new(line_start+i, "Return statement unexpected outside function definition."));
                 }
             }
             // Variable assignment.
@@ -163,47 +179,75 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
             // Function call.
             else if expression_type == ExpressionType::Call
             {
-                match parse_call(exp)
+                if in_function
                 {
-                    Ok(result) => 
+                    match parse_call(exp)
                     {
-                        let mut operations: Vec<Vec<Token>> = Vec::new();
-
-                        for statement in result.1
+                        Ok(result) => 
                         {
-                            operations.push(operation_parser::parse_operation(&statement, error_manager, line_start+i));
-                        }
+                            let mut operations: Vec<Vec<Token>> = Vec::new();
 
-                        multi_ops.insert(operation_index, (result.0, operations));
-                        operation_index += 1;
-                    },
-                    Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
+                            for statement in result.1
+                            {
+                                operations.push(operation_parser::parse_operation(&statement, error_manager, line_start+i));
+                            }
+
+                            multi_ops.insert(operation_index, (result.0, operations));
+                            operation_index += 1;
+                        },
+                        Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
+                    }
+                }
+                else
+                {
+                    push_error!(error_manager, ParseError::new(line_start+i, "Unexpected function call in script. Did you mean to call it inside a function?"));
                 }
             }
             // loop control functions
             else if expression_type == ExpressionType::Break
             {
-                single_op.insert(operation_index, ("break".to_string(), vec![]));
-                operation_index += 1;
+                if let ExpressionType::Loop = scope_expression
+                {
+                    single_op.insert(operation_index, ("break".to_string(), vec![]));
+                    operation_index += 1;
+                }
+                else
+                {
+                    push_error!(error_manager, ParseError::new(line_start+i, "Break statement used outside loop."));
+                }
             }
             else if expression_type == ExpressionType::Continue
             {
-                single_op.insert(operation_index, ("continue".to_string(), vec![]));
-                operation_index += 1;
+                if let ExpressionType::Loop = scope_expression
+                {
+                    single_op.insert(operation_index, ("continue".to_string(), vec![]));
+                    operation_index += 1;
+                }
+                else
+                {
+                    push_error!(error_manager, ParseError::new(line_start+i, "Continue statement used outside loop."));
+                }
             }
             // Importing external functions
             else if expression_type == ExpressionType::Library
             {
-                let library = exp.trim_start_matches(match exp
+                if !in_function
                 {
-                    _ if exp.starts_with("use") => "use",
-                    _ if exp.starts_with("using") => "using",
-                    _ if exp.starts_with("import") => "import",
-                    _ if exp.starts_with("include") => "include",
-                    _ => ""
-                });
-                
-                includes.push(library.to_string());
+                    let library = exp.trim_start_matches(match exp
+                    {
+                        _ if exp.starts_with("use") => "use",
+                        _ if exp.starts_with("using") => "using",
+                        _ if exp.starts_with("import") => "import",
+                        _ if exp.starts_with("include") => "include",
+                        _ => ""
+                    });
+                    
+                    includes.push(library.to_string());
+                }
+                else
+                {
+                    push_error!(error_manager, ParseError::new(line_start+i, "Library includes are not allowed within a scope."));
+                }
             }
             else if expression_type == ExpressionType::End
             {

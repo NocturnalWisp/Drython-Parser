@@ -1,9 +1,7 @@
 System
 
 callme():
-    if 1 == 2:
-        print("brngf")
-    else if 2 == 2:
-        print("bananans")
+    banana():
+        print("Yeah"!)
     end
 end

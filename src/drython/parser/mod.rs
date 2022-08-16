@@ -49,7 +49,7 @@ impl Parser
         }
 
         // Parse global expressions.
-        let global_expressions = parse_expressions(&lines[1..].to_vec(), 2, error_manager, false);
+        let global_expressions = parse_expressions(&lines[1..].to_vec(), 2, error_manager, &utility::ExpressionType::None, false);
 
         Ok(Parser
         {
