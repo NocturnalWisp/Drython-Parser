@@ -83,7 +83,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                     match parse_scope(&expressions[scope_start].split_once(")").unwrap().1, &scope_expression)
                     {
                         Ok(result) => {internal_expression.scope_info = result;}
-                        Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
+                        Err(error) => {push_error!(error_manager, ParseError::new(line_start+scope_start, error.as_str()));}
                     }
 
                     internal_expressions.insert(operation_index, internal_expression);

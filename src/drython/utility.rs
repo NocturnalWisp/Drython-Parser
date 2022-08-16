@@ -5,6 +5,11 @@ pub fn get_expression_type(string: &str) -> Result<ExpressionType, String>
     let mut buffer = String::new();
     let mut started_call_or_function = false;
 
+    if string.is_empty()
+    {
+        return Ok(ExpressionType::None);
+    }
+
     match string.to_lowercase().as_str()
     {
         "break" => {return Ok(ExpressionType::Break);}

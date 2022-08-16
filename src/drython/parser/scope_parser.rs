@@ -2,6 +2,11 @@ use crate::drython::utility::ExpressionType;
 
 pub fn parse_scope(exp: &str, expression_type: &ExpressionType) -> Result<(Option<String>, Option<String>), String>
 {
+    if exp.chars().last().unwrap() != ':'
+    {
+        return Err(format!("{:?} expressions need to end with a ':'", expression_type));
+    }
+
     match expression_type
     {
         // Loop
