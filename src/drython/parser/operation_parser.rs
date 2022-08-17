@@ -4,8 +4,6 @@ use crate::drython::types::Token;
 
 use crate::drython::utility;
 
-use crate::drython::types::error::*;
-
 // Used internally for parsing tokens from an operation.
 // (Without the values associated with Types::Token)
 #[derive(PartialEq, Clone, Debug)]

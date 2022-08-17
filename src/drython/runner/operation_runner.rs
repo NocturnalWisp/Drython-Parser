@@ -2,11 +2,9 @@ use std::collections::HashMap;
 
 use crate::drython::{types::{Token, Runner}, parser::operation_parser, utility};
 
-use crate::drython::types::error::*;
-
 // recursive function that runs the operation from the reverse polish notation.
 pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
-    vars: &HashMap<String, Token>, error_manager: &mut ErrorManager, line_number: usize) -> Result<Option<Token>, String>
+    vars: &HashMap<String, Token>) -> Result<Option<Token>, String>
 {
     let mut stack: Vec<Token> = vec![];
 
@@ -19,8 +17,8 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
 
             if let (Some(unhandled1), Some(unhandled2)) = (&first, &second)
             {
-                let handled_1 = handle_token_type(runner, unhandled1, vars, error_manager, line_number);
-                let handled_2 = handle_token_type(runner, unhandled2, vars, error_manager, line_number);
+                let handled_1 = handle_token_type(runner, unhandled1, vars);
+                let handled_2 = handle_token_type(runner, unhandled2, vars);
 
                 if let Err(error) = handled_1
                 {
@@ -55,7 +53,7 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
     if let Some(token) = stack.pop()
     {
         // Secondary handle in case it was a single token and not a full operation.
-        match handle_token_type(runner, &token, vars, error_manager, line_number)
+        match handle_token_type(runner, &token, vars)
         {
             Ok(Some(result)) =>
             {
@@ -77,7 +75,7 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
     }
 }
 
-fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Token>, error_manager: &mut ErrorManager, line_number: usize) -> Result<Option<Token>, String>
+fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Token>) -> Result<Option<Token>, String>
 {
     match token
     {
@@ -92,10 +90,17 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                 {
                     for arg in result
                     {
-                        if let Ok(Some(ran_token)) = 
-                            run_operation(runner, &operation_parser::parse_operation(&arg, error_manager, line_number), vars, error_manager, line_number)
+                        match &operation_parser::parse_operation(&arg)
                         {
-                            parsed_args.push(ran_token);
+                            Ok(operation) =>
+                            {
+                                if let Ok(Some(ran_token)) = 
+                                    run_operation(runner, operation, vars)
+                                {
+                                    parsed_args.push(ran_token);
+                                }
+                            }
+                            Err(error) => {return Err(error.clone());}
                         }
                     }
                 }
@@ -105,21 +110,25 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                 }
             }
             
-            let call_result = runner.call_function(name, parsed_args, error_manager);
+            let call_result = runner.call(name, parsed_args);
             
-            if let None = call_result
+            match &call_result
             {
-                return Ok(Some(token.clone()));
-            }
-            else
-            {
-                return Ok(call_result);
+                Ok(None) =>
+                {
+                    return Ok(Some(token.clone()));
+                }
+                Ok(Some(result)) =>
+                {
+                    return Ok(Some(result.clone()));
+                }
+                Err(error) => {return Err(error.0.clone());}
             }
         },
         Token::Operation(op) =>
         {
             // Run operation recursively.
-            return run_operation(runner, op, vars, error_manager, line_number);
+            return run_operation(runner, op, vars);
         },
         Token::Var(name) =>
         {
@@ -143,7 +152,7 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
 
             for item in items
             {
-                if let Ok(Some(token_result)) = handle_token_type(runner, item, vars, error_manager, line_number)
+                if let Ok(Some(token_result)) = handle_token_type(runner, item, vars)
                 {
                     new_items.push(token_result);
                 }
@@ -157,8 +166,8 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
         },
         Token::Accessor(prev_token, accessor) =>
         {
-            let handled_accessor = handle_token_type(runner, accessor, vars, error_manager, line_number);
-            match handle_token_type(runner, prev_token, vars, error_manager, line_number)
+            let handled_accessor = handle_token_type(runner, accessor, vars);
+            match handle_token_type(runner, prev_token, vars)
             {
                 Ok(Some(Token::Collection(collection))) =>
                 {
@@ -167,7 +176,7 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                         Ok(Some(Token::Int(i))) =>
                         {
                             let token = &collection[i as usize];
-                            if let Ok(Some(result)) = handle_token_type(runner, token, vars, error_manager, line_number)
+                            if let Ok(Some(result)) = handle_token_type(runner, token, vars)
                             {
                                 return Ok(Some(result));
                             }
@@ -181,7 +190,7 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                             if let Token::Int(i) = &**accessor
                             {
                                 let token = &collection[*i as usize];
-                                if let Ok(Some(result)) = handle_token_type(runner, token, vars, error_manager, line_number)
+                                if let Ok(Some(result)) = handle_token_type(runner, token, vars)
                                 {
                                     return Ok(Some(result));
                                 }
@@ -208,11 +217,11 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                     {
                         Ok(Some(Token::String(accessor_str))) =>
                         {
-                            return handle_token_type(runner, &Token::Var(format!("{}.{}", value, accessor_str.clone())), vars, error_manager, line_number);
+                            return handle_token_type(runner, &Token::Var(format!("{}.{}", value, accessor_str.clone())), vars);
                         }
                         Ok(Some(Token::Call(name, args))) =>
                         {
-                            return handle_token_type(runner, &Token::Call(format!("{}.{}", value, name), args), vars, error_manager, line_number);
+                            return handle_token_type(runner, &Token::Call(format!("{}.{}", value, name), args), vars);
                         }
                         Err(error) =>
                         {

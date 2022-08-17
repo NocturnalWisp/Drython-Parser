@@ -21,7 +21,6 @@ impl Runner
         Runner
         {
             parser,
-            internal_functions: HashMap::new(),
             external_functions: HashMap::new(),
             vars: HashMap::new(),
         }
@@ -72,21 +71,10 @@ impl Runner
             }
         }
 
-        // Register all functions.
-        for func in &self.parser.global_expressions.internal_expressions
-        {
-            let scope_info = &func.1.0.scope_info;
-
-            if let Some(func_name) = &scope_info.0
-            {
-                self.internal_functions.insert(func_name.clone(), Runner::call_internal);
-            }
-        }
-        
         // Register all variables.
         for var in &self.parser.global_expressions.single_op
         {
-            let operation = run_operation(self, &var.1.1, &HashMap::new(), error_manager, var.1.2);
+            let operation = run_operation(self, &var.1.1, &HashMap::new());
 
             match operation
             {
@@ -103,104 +91,97 @@ impl Runner
         }
     }
 
-    pub fn call_function(&self, function_name: &str, args: Vec<Token>, error_manager: &mut ErrorManager) -> Option<Token>
+    pub fn  call_function(&self, function_name: &str, args: Vec<Token>, error_manager: &mut ErrorManager) -> Option<Token>
     {
-        if self.internal_functions.contains_key(function_name)
+        match self.call(function_name, args)
         {
-            let result = self.internal_functions[function_name](self, function_name, args);
-            
-            error_manager.merge(result.1);
-
-            return result.0;
+            Ok(result) => {return result;}
+            Err((error, line_number)) => {push_error!(error_manager, RuntimeError::new(line_number, Some(function_name.to_string()), error.as_str())); return None;}
         }
-        else if self.external_functions.contains_key(function_name)
-        {
-            if let Some(call) = &self.external_functions[function_name]
-            {
-                return call(args);
-            }
-        }
-        else
-        {
-            push_error!(error_manager, RuntimeError::new(0, Some(function_name.to_string()), format!("No function called '{}' exists.", function_name).as_str()));
-        }
-        
-        None
     }
 
-    // Called by a function pointer from a registered internal function.
-    fn call_internal(&self, function_name: &str, arguments: Vec<Token>) -> (Option<Token>, ErrorManager)
+    fn call(&self, function_name: &str, args: Vec<Token>) -> Result<Option<Token>, (String, usize)>
     {
-        let mut error_manager = ErrorManager::new();
-
-        // Try and find if the function exists
-        let found_func = self.parser.global_expressions.internal_expressions.iter()
+        let found_internal = self.parser.global_expressions.internal_expressions.iter()
             .find(|x| 
                 if let Some(name) = &x.1.0.scope_info.0
                 {
                     name == function_name
                 } else {false}
             );
+        if let Some(function) = found_internal
+        {
+            match self.call_internal(&function.1.0, args)
+            {
+                Ok(result) => Ok(result),
+                Err(error) => Err((error, function.1.1))
+            }
+        }
+        else if self.external_functions.contains_key(function_name)
+        {
+            if let Some(call) = &self.external_functions[function_name]
+            {
+                Ok(call(args))
+            }
+            else { Ok(None) }
+        }
+        else
+        {
+            Err((format!("No function called '{}' exists.", function_name), 0))
+        }
+    }
 
+    // Called by a function pointer from a registered internal function.
+    fn call_internal(&self, function: &ExpressionList, arguments: Vec<Token>) -> Result<Option<Token>, String>
+    {
         let mut return_result: Option<Token> = None;
 
-        if let Some(function) = found_func
+        let mut scope_vars: HashMap<String, Token> = HashMap::new();
+
+        let mut arg_vars: HashMap<String, Token> = HashMap::new();
+        if let Some(expected_args) = &function.scope_info.1
         {
-            let mut scope_vars: HashMap<String, Token> = HashMap::new();
-
-            let mut arg_vars: HashMap<String, Token> = HashMap::new();
-            if let Some(expected_args) = &function.1.0.scope_info.1
+            match utility::split_by(expected_args, ',')
             {
-                match utility::split_by(expected_args, ',')
+                Ok(mut parsed_arg_names) =>
                 {
-                    Ok(mut parsed_arg_names) =>
+                    if parsed_arg_names.len() == arguments.len()
                     {
-                        if parsed_arg_names.len() == arguments.len()
+                        for i in 0..parsed_arg_names.len()
                         {
-                            for i in 0..parsed_arg_names.len()
-                            {
-                                arg_vars.insert(
-                                    parsed_arg_names.pop().unwrap_or("null".to_string()),
-                                    arguments[i].clone()
-                                );
-                            }
-                        }
-                        else
-                        {
-                            push_error!(error_manager,
-                                RuntimeError::new(function.1.1, Some(function_name.to_string()),
-                                    format!("Expected {} arguments, but only recieved {}.", parsed_arg_names.len(), arguments.len()).as_str()));
+                            arg_vars.insert(
+                                parsed_arg_names.pop().unwrap_or("null".to_string()),
+                                arguments[i].clone()
+                            );
                         }
                     }
-                    Err(error) =>
+                    else
                     {
-                        push_error!(error_manager, RuntimeError::new(function.1.1, Some(function_name.to_string()), error.as_str()));
+                        return Err(format!("Expected {} arguments, but only recieved {}.", parsed_arg_names.len(), arguments.len()));
                     }
                 }
-            }
-
-            scope_vars.extend(self.vars.clone());
-            scope_vars.extend(arg_vars);
-
-            match self.handle_scope(&function.1.0, &mut scope_vars, false, &mut error_manager)
-            {
-                Ok(result) =>
-                {
-                    return_result = result;
-                }
-                Err(error) =>
-                {
-                    push_error!(error_manager, RuntimeError::new(function.1.1, Some(function_name.to_string()), error.as_str()));
-                }
+                Err(error) => {return Err(error);}
             }
         }
 
-        (return_result, error_manager)
+        scope_vars.extend(self.vars.clone());
+        scope_vars.extend(arg_vars);
+
+        match self.handle_scope(&function, &mut scope_vars, false)
+        {
+            Ok(result) =>
+            {
+                return_result = result;
+            }
+            Err(error) => {return Err(error);}
+        }
+
+        Ok(return_result)
     }
 
     // Resursive function to handle calling order in internal scopes.
     // Originally called by call_internal for a parsed function.
-    fn handle_scope(&self, function: &ExpressionList, vars: &mut HashMap<String, Token>, is_loop: bool, error_manager: &mut ErrorManager) -> Result<Option<Token>, String>
+    fn handle_scope(&self, function: &ExpressionList, vars: &mut HashMap<String, Token>, is_loop: bool) -> Result<Option<Token>, String>
     {
         let mut return_result: Result<Option<Token>, String> = Ok(None);
         
@@ -217,7 +198,7 @@ impl Runner
                 _ if function.single_op.contains_key(&i) =>
                 {
                     let expression = &function.single_op[&i];
-                    let operation = run_operation(self, &expression.1, &vars, error_manager, expression.2);
+                    let operation = run_operation(self, &expression.1, &vars);
 
                     match expression.0.as_str()
                     {
@@ -280,7 +261,7 @@ impl Runner
 
                     for tokens in expression.1.iter()
                     {
-                        match run_operation(self, &tokens, &vars, error_manager, expression.2)
+                        match run_operation(self, &tokens, &vars)
                         {
                             Ok(Some(result)) =>
                             {
@@ -294,7 +275,11 @@ impl Runner
                         }
                     }
 
-                    self.call_function(&expression.0, args, error_manager);
+                    match self.call(&expression.0, args)
+                    {
+                        Ok(_) => (),
+                        Err(error) => {return Err(error.0);}
+                    }
                 },
                 // Internal scope.
                 _ if function.internal_expressions.contains_key(&i) =>
@@ -309,23 +294,28 @@ impl Runner
                                 if let Some(if_op) = &function.0.scope_info.1
                                 {
                                     // Only handle scope if the "if operation" is true.
-                                    let operation = parse_operation(if_op, error_manager, 0);
-
-                                    match run_operation(self, &operation, &vars, error_manager, function.1)
+                                    match parse_operation(if_op)
                                     {
-                                        Ok(Some(Token::Bool(true))) =>
+                                        Ok(operation) =>
                                         {
-                                            return_result = self.handle_scope(&function.0, vars, is_loop, error_manager);
-                                            previous_if_failed = false;
+                                            match run_operation(self, &operation, &vars)
+                                            {
+                                                Ok(Some(Token::Bool(true))) =>
+                                                {
+                                                    return_result = self.handle_scope(&function.0, vars, is_loop);
+                                                    previous_if_failed = false;
+                                                }
+                                                Err(error) =>
+                                                {
+                                                    return Err(error);
+                                                }
+                                                _ =>
+                                                {
+                                                    previous_if_failed = true;
+                                                }
+                                            }
                                         }
-                                        Err(error) =>
-                                        {
-                                            return Err(error);
-                                        }
-                                        _ =>
-                                        {
-                                            previous_if_failed = true;
-                                        }
+                                        Err(error) => {return Err(error);}
                                     }
                                 }
                             },
@@ -337,23 +327,28 @@ impl Runner
                                     if let Some(if_op) = &function.0.scope_info.1
                                     {
                                         // Only handle scope if the "elif operation" is true.
-                                        let operation = parse_operation(if_op, error_manager, 0);
-
-                                        match run_operation(self, &operation, &vars, error_manager, function.1)
+                                        match parse_operation(if_op)
                                         {
-                                            Ok(Some(Token::Bool(true))) =>
+                                            Ok(operation) =>
                                             {
-                                                return_result = self.handle_scope(&function.0, vars, is_loop, error_manager);
-                                                previous_if_failed = false;
+                                                match run_operation(self, &operation, &vars)
+                                                {
+                                                    Ok(Some(Token::Bool(true))) =>
+                                                    {
+                                                        return_result = self.handle_scope(&function.0, vars, is_loop);
+                                                        previous_if_failed = false;
+                                                    }
+                                                    Err(error) =>
+                                                    {
+                                                        return Err(error);
+                                                    }
+                                                    _ =>
+                                                    {
+                                                        previous_if_failed = true;
+                                                    }
+                                                }
                                             }
-                                            Err(error) =>
-                                            {
-                                                return Err(error);
-                                            }
-                                            _ =>
-                                            {
-                                                previous_if_failed = true;
-                                            }
+                                            Err(error) => {return Err(error);}
                                         }
                                     }
                                 }
@@ -363,14 +358,14 @@ impl Runner
                             {
                                 if previous_if_failed
                                 {
-                                    return_result = self.handle_scope(&function.0, vars, is_loop, error_manager);
+                                    return_result = self.handle_scope(&function.0, vars, is_loop);
                                 }
                             },
                             "loop" =>
                             {
                                 loop
                                 {
-                                    return_result = self.handle_scope(&function.0, vars, true, error_manager);
+                                    return_result = self.handle_scope(&function.0, vars, true);
 
                                     match return_result
                                     {
@@ -387,12 +382,12 @@ impl Runner
                                     }
                                 }
                             }
-                            _ => return_result = self.handle_scope(&function.0, vars, is_loop, error_manager)
+                            _ => return_result = self.handle_scope(&function.0, vars, is_loop)
                         }
                     }
                     else
                     {
-                        return_result = self.handle_scope(&function.0, vars, is_loop, error_manager);
+                        return_result = self.handle_scope(&function.0, vars, is_loop);
                     }
                 },
                 _ => ()
