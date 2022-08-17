@@ -148,10 +148,18 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                     {
                         Ok(statement) => 
                         {
-                            let operation = operation_parser::parse_operation(statement, error_manager, line_start+i);
-
-                            single_op.insert(operation_index, ("return".to_string(), operation, line_start+i));
-                            operation_index += 1;
+                            match operation_parser::parse_operation(statement)
+                            {
+                                Ok(operation) =>
+                                {
+                                    single_op.insert(operation_index, ("return".to_string(), operation, line_start+i));
+                                    operation_index += 1;
+                                }
+                                Err(error) =>
+                                {
+                                    parse_error!(error_manager, line_start+i, error.as_str());
+                                }
+                            }
                         }
                         Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
                     }
@@ -168,10 +176,15 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                 {
                     Ok(result) => 
                     {
-                        let operation = operation_parser::parse_operation(&result.1, error_manager, line_start+i);
-
-                        single_op.insert(operation_index, (result.0, operation, line_start+i));
-                        operation_index += 1;
+                        match operation_parser::parse_operation(&result.1)
+                        {
+                            Ok(operation) =>
+                            {
+                                single_op.insert(operation_index, (result.0, operation, line_start+i));
+                                operation_index += 1;
+                            }
+                            Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
+                        }
                     },
                     Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
                 }
@@ -189,7 +202,11 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
 
                             for statement in result.1
                             {
-                                operations.push(operation_parser::parse_operation(&statement, error_manager, line_start+i));
+                                match operation_parser::parse_operation(&statement)
+                                {
+                                    Ok(operation) => operations.push(operation),
+                                    Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
+                                }
                             }
 
                             multi_ops.insert(operation_index, (result.0, operations, line_start+i));

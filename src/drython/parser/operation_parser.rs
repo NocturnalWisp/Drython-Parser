@@ -27,7 +27,7 @@ use ParseTokenType as PTT;
 
 // Hybrid polish notation/ast tree. Internal operations (Expressed in parentheses)
 // are put into a recursive calculation.
-pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line_number: usize) -> Vec<Token>
+pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
 {
     let mut last_token_type = ParseTokenType::None;
     let mut token_start: usize = 0;
@@ -78,9 +78,9 @@ pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line
                 let skip_current = match (&last_token_type, &current_char_type)
                 {
                     (PTT::Value, PTT::StringLiteral) =>
-                        {parse_error!(error_manager, line_number, "Unexpected string literal after value type."); break;},
+                        {return Err("Unexpected string literal after value type.".to_string());},
                     (PTT::Value, PTT::Collection) =>
-                        {parse_error!(error_manager, line_number, "Unexpected collection after value type."); break;},
+                        {return Err("Unexpected collection after value type.".to_string());},
                     (PTT::Value, PTT::Operator) => false,
                     (PTT::Value, PTT::Parenth) => false,
                     (PTT::Value, PTT::Accessor) =>
@@ -174,7 +174,7 @@ pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line
                 }
                 else
                 {
-                    parse_error!(error_manager, line_number, format!("{} Operation was not recognized.", found_operator).as_str());
+                    return Err(format!("{} Operation was not recognized.", found_operator));
                 }
 
                 last_token_type = ParseTokenType::None;
@@ -195,17 +195,28 @@ pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line
                         {
                             Ok(result) =>
                             {
-                                // Use map to make sure multi-operations are kept in a Token::Operation.
-                                let collection_operations = result.iter().map(|x| {
-                                    let operation = parse_operation(x, error_manager, line_number);
+                                let mut collection_operations: Vec<Token> = Vec::new();
+                                for collection_operation in result.iter()
+                                {
+                                    let operation = parse_operation(&collection_operation);
 
-                                    match operation.len()
+                                    match operation
                                     {
-                                        0 => Token::Null,
-                                        1 => operation[0].clone(),
-                                        _ => Token::Operation(operation)
+                                        Ok(op) =>
+                                        {
+                                            match op.len()
+                                            {
+                                                0 => collection_operations.push(Token::Null),
+                                                1 => collection_operations.push(op[0].clone()),
+                                                _ => collection_operations.push(Token::Operation(op))
+                                            }
+                                        },
+                                        Err(error) =>
+                                        {
+                                            return Err(error);
+                                        }
                                     }
-                                }).collect::<Vec<Token>>();
+                                }
                                  
                                 let token = Token::Collection(collection_operations);
                                 // Check if using an accessor after this call.
@@ -227,10 +238,10 @@ pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line
                             }
                             Err(error) =>
                             {
-                                push_error!(error_manager, ParseError::new(line_number, error.as_str()));
+                                return Err(error);
                             }
                         }
-                                               continue;
+                       continue;
                     }
                     else
                     {
@@ -250,12 +261,22 @@ pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line
                 {
                     if inner_parenth_count == 0
                     {
-                        let token = Token::Operation(parse_operation(&string[token_start..token_end], error_manager, line_number));
-                        
-                        tokens_ptr.push(token);
+                        match parse_operation(&string[token_start..token_end])
+                        {
+                            Ok(op) =>
+                            {
+                                let token = Token::Operation(op);
+                                
+                                tokens_ptr.push(token);
 
-                        last_token_type = ParseTokenType::None;
-                        token_start = i;
+                                last_token_type = ParseTokenType::None;
+                                token_start = i;
+                            },
+                            Err(error) =>
+                            {
+                                return Err(error);
+                            }
+                        }
                     }
                     else
                     {
@@ -419,15 +440,15 @@ pub fn parse_operation<'a>(string: & str, error_manager: &mut ErrorManager, line
     // If still in parenthises, there is an error.
     if inner_parenth_count > 0
     {
-        parse_error!(error_manager, line_number, "Parenthesis were not closed during operation.");
+        return Err("Parenthesis were not closed during operation.".to_string());
     }
     else if inner_parenth_count < 0
     {
-        parse_error!(error_manager, line_number, "Too many closing parenthesis found.");
+        return Err("Too many closing parenthesis found.".to_string());
     }
     
     // Handle operation order and populating.
-    handle_populating_operation(tokens)
+    Ok(handle_populating_operation(tokens))
     
 }
 
