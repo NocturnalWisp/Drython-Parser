@@ -26,7 +26,8 @@ impl Runner
         }
     }
     
-    pub fn run_setup(& mut self, error_manager: &mut ErrorManager)
+    pub fn run_setup(&mut self, error_manager: &mut ErrorManager,
+                     additional_libraries: Vec<(Vec<RegisteredFunction>, Vec<RegisteredVariable>)>)
     {
         // Include base external functions and vars.
         let mut functions: Vec<RegisteredFunction> = Vec::new();
@@ -37,12 +38,12 @@ impl Runner
 
         while let Some(function) = functions.pop()
         {
-            self.external_functions.insert(function.0.clone(), function.1);
+            self.external_functions.insert(function.0, function.1);
         }
 
         while let Some(var) = vars.pop()
         {
-            self.vars.insert(var.0.clone(), var.1.clone());
+            self.vars.insert(var.0, var.1);
         }
 
         // Include libs
@@ -87,6 +88,19 @@ impl Runner
                     push_error!(error_manager, RuntimeError::new(var.1.2, None, error.as_str()));
                 }
                 _ => ()
+            }
+        }
+
+        for mut additional_lib in additional_libraries
+        {
+            while let Some(function) = additional_lib.0.pop()
+            {
+                self.external_functions.insert(function.0, function.1);
+            }
+
+            while let Some(var) = additional_lib.1.pop()
+            {
+                self.vars.insert(var.0, var.1);
             }
         }
     }

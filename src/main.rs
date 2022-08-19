@@ -17,7 +17,7 @@ fn main()
 
             // println!("{:#?}", runner.parser.global_expressions);
 
-            runner.run_setup(&mut error_manager);
+            runner.run_setup(&mut error_manager, vec![]);
 
             runner.call_function("callme", vec![], &mut error_manager);
 
