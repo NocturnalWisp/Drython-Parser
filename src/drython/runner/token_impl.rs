@@ -1,5 +1,5 @@
 use crate::drython::types::Token;
-use std::convert::From;
+use std::{convert::From, fmt::{self, Display}};
 
 impl Token
 {
@@ -494,5 +494,33 @@ impl From<Token> for bool
             Token::Bool(i) => i,
             _ => false
         }
+    }
+}
+
+impl Display for Token
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
+    {
+        write!(f, "{}", match self
+        {
+            Token::Int(i) => i.to_string(),
+            Token::Float(f) => f.to_string(),
+            Token::Bool(b) => b.to_string(),
+            Token::String(s) => format!("\"{}\"", s),
+            Token::Collection(c) =>
+            {
+                let mut s = String::new();
+                s.push('[');
+                for token in c
+                {
+                    s.push_str(&token.to_string());
+                    s.push(',');
+                }
+                s.pop();
+                s.push(']');
+                s
+            },
+            _ => "".to_string()
+        })
     }
 }

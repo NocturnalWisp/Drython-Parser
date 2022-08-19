@@ -17,8 +17,8 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
 
             if let (Some(unhandled1), Some(unhandled2)) = (&first, &second)
             {
-                let handled_1 = handle_token_type(runner, unhandled1, vars);
-                let handled_2 = handle_token_type(runner, unhandled2, vars);
+                let handled_1 = handle_token_type(runner, unhandled1, vars, false);
+                let handled_2 = handle_token_type(runner, unhandled2, vars, false);
 
                 if let Err(error) = handled_1
                 {
@@ -53,7 +53,7 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
     if let Some(token) = stack.pop()
     {
         // Secondary handle in case it was a single token and not a full operation.
-        match handle_token_type(runner, &token, vars)
+        match handle_token_type(runner, &token, vars, false)
         {
             Ok(Some(result)) =>
             {
@@ -75,7 +75,7 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
     }
 }
 
-fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Token>) -> Result<Option<Token>, String>
+fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Token>, return_original: bool) -> Result<Option<Token>, String>
 {
     match token
     {
@@ -152,7 +152,7 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
 
             for item in items
             {
-                if let Ok(Some(token_result)) = handle_token_type(runner, item, vars)
+                if let Ok(Some(token_result)) = handle_token_type(runner, item, vars, false)
                 {
                     new_items.push(token_result);
                 }
@@ -166,124 +166,70 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
         },
         Token::Accessor(prev_token, accessor) =>
         {
-            let handled_accessor = handle_token_type(runner, accessor, vars);
-            match handle_token_type(runner, prev_token, vars)
+            match (handle_token_type(runner, prev_token, vars, false), handle_token_type(runner, accessor, vars, true))
             {
-                Ok(Some(Token::Collection(collection))) =>
+                // Collection.Int -> index
+                (Ok(Some(Token::Collection(collection))), Ok(Some(Token::Int(i)))) =>
                 {
-                    match handled_accessor
+                    let token = &collection[i as usize];
+                    if let Ok(Some(result)) = handle_token_type(runner, token, vars, false)
                     {
-                        Ok(Some(Token::Int(i))) =>
-                        {
-                            let token = &collection[i as usize];
-                            if let Ok(Some(result)) = handle_token_type(runner, token, vars)
-                            {
-                                return Ok(Some(result));
-                            }
-                            else
-                            {
-                                return Ok(Some(token.clone()));
-                            }
-                        }
-                        Ok(None) =>
-                        {
-                            if let Token::Int(i) = &**accessor
-                            {
-                                let token = &collection[*i as usize];
-                                if let Ok(Some(result)) = handle_token_type(runner, token, vars)
-                                {
-                                    return Ok(Some(result));
-                                }
-                                else
-                                {
-                                    return Ok(Some(token.clone()));
-                                }
-                            }
-                            else
-                            {
-                                return Ok(None);
-                            }
-                        }
-                        Err(error) =>
-                        {
-                            return Err(error);
-                        }
-                        _ => { return Ok(None); }
-                    }
-                },
-                Ok(Some(Token::String(value))) =>
-                {
-                    match handled_accessor
-                    {
-                        Ok(Some(Token::String(accessor_str))) =>
-                        {
-                            return handle_token_type(runner, &Token::Var(format!("{}.{}", value, accessor_str.clone())), vars);
-                        }
-                        Ok(Some(Token::Call(name, args))) =>
-                        {
-                            return handle_token_type(runner, &Token::Call(format!("{}.{}", value, name), args), vars);
-                        }
-                        Err(error) =>
-                        {
-                            return Err(error);
-                        }
-                        _ => { return Ok(None); }
-                    }
-                }
-                Ok(None) =>
-                {
-                    if let Token::String(value) = &**prev_token
-                    {
-                        match handled_accessor
-                        {
-                            Ok(Some(Token::Int(i))) =>
-                            {
-                                if (i as usize) < value.len() && i >= 0
-                                {
-                                    return Ok(Some(Token::String(value.as_str()[(i as usize)..((i+1) as usize)].to_string())));
-                                }
-                                else
-                                {
-                                    return Err("Tried to access a string index out of range.".to_string());
-                                }
-                            }
-                            Ok(None) =>
-                            {
-                                if let Token::Int(i) = &**accessor
-                                {
-                                    if (*i as usize) < value.len() && *i >= 0
-                                    {
-                                        return Ok(Some(Token::String(value.as_str()[(*i as usize)..((i+1) as usize)].to_string())));
-                                    }
-                                    else
-                                    {
-                                        return Err("Tried to access a string index out of range.".to_string());
-                                    }
-                                }
-                                else
-                                {
-                                    return Ok(None);
-                                }
-                            }
-                            Err(error) =>
-                            {
-                                return Err(error);
-                            }
-                            _ => { return Ok(None); }
-                        }
+                        Ok(Some(result))
                     }
                     else
                     {
-                        return Ok(None);
+                        Ok(Some(token.clone()))
                     }
-                }
-                _ => { return Ok(None); }
+                },
+                // String.String -> variable name
+                (Ok(Some(Token::String(value))), Ok(Some(Token::String(accessor_str)))) =>
+                {
+                    handle_token_type(runner, &Token::Var(format!("{}.{}", value, accessor_str.clone())), vars, false)
+                },
+                // String.Call() -> call with longer name
+                (Ok(Some(Token::String(value))), Ok(Some(Token::Call(name, args)))) =>
+                {
+                    handle_token_type(runner, &Token::Call(format!("{}.{}", value, name), args), vars, false)
+                },
+                (Ok(Some(Token::String(value))), Ok(Some(Token::Int(i)))) =>
+                {
+                    if (i as usize) < value.len() && i >= 0
+                    {
+                        Ok(Some(Token::String(value.as_str()[(i as usize)..((i+1) as usize)].to_string())))
+                    }
+                    else
+                    {
+                        Err("Tried to access a string index out of range.".to_string())
+                    }
+                },
+                // Remainder functions that won't be handled properly until conversion.
+                (prev, current) =>
+                {
+                    match &**accessor
+                    {
+                        Token::Call(name, args) =>
+                        {
+                            if let Ok(Some(actual_prev)) = &prev
+                            {
+                                if let Ok(result) = handle_token_type(runner, &Token::Call(name.to_string(), format!("{},{}", actual_prev, args)), vars, return_original)
+                                {
+                                    return Ok(result);
+                                }
+                            }
+                        }
+                        _ => ()
+                    }
+                    
+                    match (prev, current)
+                    {
+                        (Err(error), _) => Err(error),
+                        (_, Err(error)) => Err(error),
+                        (_, _) => Ok(None)
+                    }
+                },
             }
-
-            // Handle call.
-
         }
-        _ => { return Ok(None); }
+        _ => Ok(if return_original { Some(token.clone()) } else { None })
     }
 }
 
