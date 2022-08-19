@@ -3,7 +3,7 @@ use super::types::{Token, DynamicFunctionCall, RegisteredFunction, RegisteredVar
 mod vector;
 pub mod auto;
 mod math;
-
+mod collection;
 
 // Allows for quick checking if a token is of a certain type.
 #[derive(Debug)]
@@ -67,6 +67,7 @@ pub fn get_lib(lib: &str) -> Result<(Vec<RegisteredFunction>, Vec<RegisteredVari
     {
         "vector" => { vector::register_functs(&mut functions); vector::register_vars(&mut vars); },
         "math" => { math::register_functs(&mut functions); math::register_vars(&mut vars); },
+        "collection" => { collection::register_functs(&mut functions); collection::register_vars(&mut vars); },
         _ => { return Err(format!("No library found with the name: {}", lib)); }
     };
 
@@ -78,59 +79,66 @@ pub fn get_lib(lib: &str) -> Result<(Vec<RegisteredFunction>, Vec<RegisteredVari
 
 // Returns true if the discriminents match the arguments.
 #[allow(dead_code)]
-pub fn expect(args: &[Token], token_checks: &[&[IsToken]]) -> bool
+pub fn expect(args: &Vec<Token>, token_checks: &[Option<&[IsToken]>]) -> Result<(), String>
 {
-    if args.len() != token_checks.len()
+    if args.len() > token_checks.len()
     {
-        return false
+        return Err("Too many arguments were passed to this function.".to_string());
+    }
+    else if args.len() < token_checks.len()
+    {
+        return Err("Too few arguments passed for this function.".to_string());
     }
     
     for (i, check) in token_checks.iter().enumerate()
     {
-        let mut has_token_type = false;
-        for token in check.iter()
+        if let Some(check) = check
         {
-            if token == &args[i]
+            let mut has_token_type = false;
+            for token in check.iter()
             {
-                has_token_type = true;
+                if token == &args[i]
+                {
+                    has_token_type = true;
+                }
             }
-        }
 
-        if !has_token_type 
-        {
-            return false;
+            if !has_token_type 
+            {
+                return Err(format!("Unexpected argument type. Expected one of {:?} for argument {}.", check, i));
+            }
         }
     }
     
-    return true;
+    Ok(())
 }
 
 // Expects certain values within a collection.
 // Use "expect()" before this for better error handling.
 #[allow(dead_code)]
-pub fn expect_collection(arg: &Token, token_checks: Vec<IsToken>) -> bool
+pub fn expect_collection(arg: &Token, argument_number: usize, token_checks: Vec<IsToken>) -> Result<(), String>
 {
     if let Token::Collection(items) = arg
     {
         if items.len() != token_checks.len()
         {
-            return false
+            return Err(format!("Expected {} items in the collection for argument {}.", token_checks.len(), argument_number));
         }
         
         for (i, check) in token_checks.iter().enumerate()
         {
             if check != &items[i]
             {
-                return false;
+                return Err(format!("Expected variable of type {:?} in collection indexed at {} for argument {}", check, i, argument_number));
             }
         }
     }
     else
     {
-        return false;
+        return Err(format!("Expected a collection for argument {}", argument_number));
     }
 
-    return true;
+    Ok(())
 }
 
 #[allow(dead_code)]
@@ -164,35 +172,35 @@ pub fn attach<T, U, R>(function_call: FunctionCall<T, U, R>) -> DynamicFunctionC
     {
         FunctionCall::A0(call) =>
         {
-            return Some(Box::new(move |_args| { call(); return None; }));
+            return Some(Box::new(move |_args| { call(); Ok(None) }));
         },
         FunctionCall::A0R(call) =>
         {
             return Some(Box::new(move |_args|
                     {
-                        Some(Token::from(call()))
+                        Ok(Some(Token::from(call())))
                     }));
         },
         FunctionCall::A1(call) =>
         {
-            return Some(Box::new(move |args| { call(T::from(args[0].clone())); return None; }));
+            return Some(Box::new(move |args| { call(T::from(args[0].clone())); Ok(None) }));
         },
         FunctionCall::A1R(call) =>
         {
             return Some(Box::new(move |args|
                     {
-                        Some(Token::from(call(T::from(args[0].clone()))))
+                        Ok(Some(Token::from(call(T::from(args[0].clone())))))
                     }));
         },
         FunctionCall::A2(call) =>
         {
-            return Some(Box::new(move |args| { call(T::from(args[0].clone()), U::from(args[1].clone())); return None; }));
+            return Some(Box::new(move |args| { call(T::from(args[0].clone()), U::from(args[1].clone())); Ok(None) }));
         },
         FunctionCall::A2R(call) =>
         {
             return Some(Box::new(move |args|
                     {
-                        Some(Token::from(call(T::from(args[0].clone()), U::from(args[1].clone()))))
+                        Ok(Some(Token::from(call(T::from(args[0].clone()), U::from(args[1].clone())))))
                     }));
         },
     }

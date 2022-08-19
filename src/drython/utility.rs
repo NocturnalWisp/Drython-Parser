@@ -1,5 +1,3 @@
-use crate::drython::types::error::*;
-
 pub fn get_expression_type(string: &str) -> Result<ExpressionType, String>
 {
     let mut buffer = String::new();
@@ -31,7 +29,7 @@ pub fn get_expression_type(string: &str) -> Result<ExpressionType, String>
         {
             match c
             {
-                c if c.is_alphanumeric() || c == '.' => buffer.push(c),
+                c if c.is_alphanumeric() || c == '.' || c == '_' => buffer.push(c),
                 '=' => return Ok(ExpressionType::Assignment),
                 '(' => started_call_or_function = true,
                 c if operations_contains(c) => (),

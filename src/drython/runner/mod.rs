@@ -114,14 +114,18 @@ impl Runner
             match self.call_internal(&function.1.0, args)
             {
                 Ok(result) => Ok(result),
-                Err(error) => Err((error, function.1.1))
+                Err(error) => Err(error)
             }
         }
         else if self.external_functions.contains_key(function_name)
         {
             if let Some(call) = &self.external_functions[function_name]
             {
-                Ok(call(args))
+                match call(args)
+                {
+                    Ok(result) => Ok(result),
+                    Err(error) => Err((error, 0))
+                }
             }
             else { Ok(None) }
         }
@@ -132,9 +136,9 @@ impl Runner
     }
 
     // Called by a function pointer from a registered internal function.
-    fn call_internal(&self, function: &ExpressionList, arguments: Vec<Token>) -> Result<Option<Token>, String>
+    fn call_internal(&self, function: &ExpressionList, arguments: Vec<Token>) -> Result<Option<Token>, (String, usize)>
     {
-        let mut return_result: Option<Token> = None;
+        let return_result: Option<Token>;
 
         let mut scope_vars: HashMap<String, Token> = HashMap::new();
 
@@ -157,10 +161,10 @@ impl Runner
                     }
                     else
                     {
-                        return Err(format!("Expected {} arguments, but only recieved {}.", parsed_arg_names.len(), arguments.len()));
+                        return Err((format!("Expected {} arguments, but only recieved {}.", parsed_arg_names.len(), arguments.len()), function.line_start));
                     }
                 }
-                Err(error) => {return Err(error);}
+                Err(error) => {return Err((error, function.line_start));}
             }
         }
 
@@ -181,9 +185,9 @@ impl Runner
 
     // Resursive function to handle calling order in internal scopes.
     // Originally called by call_internal for a parsed function.
-    fn handle_scope(&self, function: &ExpressionList, vars: &mut HashMap<String, Token>, is_loop: bool) -> Result<Option<Token>, String>
+    fn handle_scope(&self, function: &ExpressionList, vars: &mut HashMap<String, Token>, is_loop: bool) -> Result<Option<Token>, (String, usize)>
     {
-        let mut return_result: Result<Option<Token>, String> = Ok(None);
+        let mut return_result: Result<Option<Token>, (String, usize)> = Ok(None);
         
         let mut local_var_refs: Vec<&str> = Vec::new();
 
@@ -204,7 +208,11 @@ impl Runner
                     {
                         "return" =>
                         {
-                            return_result = operation;
+                            match operation
+                            {
+                                Ok(result) => { return_result = Ok(result); }
+                                Err(error) => { return Err((error, function.line_start+i)); }
+                            }
                         },
                         "break" =>
                         {
@@ -247,7 +255,7 @@ impl Runner
                                 Ok(None) => (),
                                 Err(error) =>
                                 {
-                                    return Err(error);
+                                    return Err((error, function.line_start+i));
                                 }
                             }
                         }
@@ -270,7 +278,7 @@ impl Runner
                             Ok(None) => (),
                             Err(error) =>
                             {
-                                return Err(error);
+                                return Err((error, function.line_start+i));
                             }
                         }
                     }
@@ -278,7 +286,7 @@ impl Runner
                     match self.call(&expression.0, args)
                     {
                         Ok(_) => (),
-                        Err(error) => {return Err(error.0);}
+                        Err(error) => {return Err(error);}
                     }
                 },
                 // Internal scope.
@@ -307,7 +315,7 @@ impl Runner
                                                 }
                                                 Err(error) =>
                                                 {
-                                                    return Err(error);
+                                                    return Err((error, function.1));
                                                 }
                                                 _ =>
                                                 {
@@ -315,7 +323,7 @@ impl Runner
                                                 }
                                             }
                                         }
-                                        Err(error) => {return Err(error);}
+                                        Err(error) => {return Err((error, function.1));}
                                     }
                                 }
                             },
@@ -340,7 +348,7 @@ impl Runner
                                                     }
                                                     Err(error) =>
                                                     {
-                                                        return Err(error);
+                                                        return Err((error, function.1));
                                                     }
                                                     _ =>
                                                     {
@@ -348,7 +356,7 @@ impl Runner
                                                     }
                                                 }
                                             }
-                                            Err(error) => {return Err(error);}
+                                            Err(error) => {return Err((error, function.1));}
                                         }
                                     }
                                 }
@@ -408,7 +416,7 @@ impl Runner
         return_result
     }
     
-    pub fn regiser_external_function(&mut self, function_name: &str, function: fn(Vec<Token>) -> Option<Token>)
+    pub fn regiser_external_function(&mut self, function_name: &str, function: fn(Vec<Token>) -> Result<Option<Token>, String>)
     {
         self.external_functions.insert(function_name.to_string(), Some(Box::new(function)));
     }

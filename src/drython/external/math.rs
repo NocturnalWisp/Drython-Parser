@@ -7,6 +7,6 @@ pub fn register_functs(functions: &mut Vec<RegisteredFunction>)
     register_function_return!(functions, "sqrt", f32::sqrt, f32, f32);
 }
 
-pub fn register_vars(variables: &mut Vec<RegisteredVariable>)
+pub fn register_vars(_variables: &mut Vec<RegisteredVariable>)
 {
 }

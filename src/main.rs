@@ -15,7 +15,7 @@ fn main()
         {
             let mut runner = Runner::new(result);
 
-            println!("{:#?}", runner.parser.global_expressions);
+            // println!("{:#?}", runner.parser.global_expressions);
 
             runner.run_setup(&mut error_manager);
 

@@ -56,7 +56,7 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
 
         let current_char_type =
         {
-            if c.is_alphanumeric() { ParseTokenType::Value }
+            if c.is_alphanumeric() || c == '_' { ParseTokenType::Value }
             else if c == '\'' || c == '"' { ParseTokenType::StringLiteral }
             else if utility::operations_contains(c) { ParseTokenType::Operator }
             else if c == '(' || c == ')' { ParseTokenType::Parenth }
@@ -218,7 +218,7 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
                                  
                                 let token = Token::Collection(collection_operations);
                                 // Check if using an accessor after this call.
-                                if string.len() >= i+1 && &string[i+1..i+2] == "."
+                                if string.len() > i+1 && &string[i+1..i+2] == "."
                                 {
                                     current_accessor_token = token;
                                     

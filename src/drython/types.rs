@@ -58,15 +58,13 @@ pub enum Token
     Operator(String),
     // Accessor stores the accessor after the '.', and the token before.
     Accessor(Box<Token>, Box<Token>),
-    // Used by external functions to throw errors back to the runner.
-    Error(String),
 
     // Internal use only.
     // Allows an inner scope to break a loop.
     Break
 }
 
-pub type DynamicFunctionCall = Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>;
+pub type DynamicFunctionCall = Option<Box<dyn Fn(Vec<Token>) -> Result<Option<Token>, String>>>;
 pub type RegisteredFunction= (String, DynamicFunctionCall);
 pub type RegisteredVariable = (String, Token);
 
@@ -81,6 +79,6 @@ pub struct Operation
 pub struct Runner
 {
     pub parser: Parser,
-    pub external_functions: HashMap<String, Option<Box<dyn Fn(Vec<Token>) -> Option<Token>>>>,
+    pub external_functions: HashMap<String, DynamicFunctionCall>,
     pub vars: HashMap<String, Token>
 }
