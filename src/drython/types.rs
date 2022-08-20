@@ -53,6 +53,8 @@ pub enum Token
     Char(char),
     Collection(Vec<Token>),
     
+    // Meta variables that store information not usually visible to the dev.
+    // Unless debugging.
     Var(String),
     Call(String, String),
     Operation(Vec<Token>),

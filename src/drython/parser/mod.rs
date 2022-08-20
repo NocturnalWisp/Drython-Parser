@@ -12,6 +12,39 @@ use super::types::Parser;
 use super::utility;
 use super::types::error::*;
 
+#[derive(PartialEq, Debug, Clone)]
+pub enum ExpressionType
+{
+    None,
+    Assignment,
+    Function,
+    Call,
+    Return,
+    If,
+    Elif,
+    Else,
+    Loop,
+    Break,
+    Continue,
+    Library,
+    Comment,
+    End,
+}
+
+impl ExpressionType
+{
+    pub fn is_scope(&self) -> bool
+    {
+        match self
+        {
+            ExpressionType::Function => true,
+            ExpressionType::If => true,
+            ExpressionType::Loop => true,
+            _ => false
+        }
+    }
+}
+
 impl Parser
 {
     // Main parse function.
@@ -49,7 +82,7 @@ impl Parser
         }
 
         // Parse global expressions.
-        let global_expressions = parse_expressions(&lines[1..].to_vec(), 2, error_manager, &utility::ExpressionType::None, false);
+        let global_expressions = parse_expressions(&lines[1..].to_vec(), 2, error_manager, &ExpressionType::None, false);
 
         Ok(Parser
         {

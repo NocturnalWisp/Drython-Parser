@@ -32,10 +32,6 @@ impl ErrorManager
 #[macro_export]
 macro_rules! push_error
 {
-    ($manager: ident, $error: expr) =>
-    {
-        $manager.add_error(Box::new($error))
-    };
     ($manager: expr, $error: expr) =>
     {
         $manager.add_error(Box::new($error))

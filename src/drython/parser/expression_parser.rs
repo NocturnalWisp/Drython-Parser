@@ -1,11 +1,13 @@
 #[path="scope_parser.rs"]
 mod scope_parser;
+#[path="call_parser.rs"]
+mod call_parser;
 
 use std::collections::HashMap;
 
 use crate::drython::types::Token;
 
-use super::{utility::{self, ExpressionType}, operation_parser};
+use super::{utility, operation_parser, ExpressionType};
 use super::types::ExpressionList;
 use super::variable_parser::parse_var;
 use scope_parser::parse_scope;
@@ -42,7 +44,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
         }
         else {continue;}
 
-        let expression_type_result = utility::get_expression_type(exp);
+        let expression_type_result = get_expression_type(exp);
         let expression_type: ExpressionType;
 
         match expression_type_result
@@ -63,7 +65,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
 
         if inside_scope
         {
-            if utility::expression_is_scope(&expression_type)
+            if expression_type.is_scope()
             {
                 scope_count += 1;
             }
@@ -126,7 +128,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
         else
         {            
             // Scope change (if/loop).
-            if utility::expression_is_scope(&expression_type)
+            if expression_type.is_scope()
             {
                 scope_start = i;
                 scope_expression = expression_type.clone();
@@ -144,24 +146,17 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
             {
                 if in_function
                 {
-                    match parse_return(exp)
+                    match operation_parser::parse_operation(exp.trim_start_matches("return"))
                     {
-                        Ok(statement) => 
+                        Ok(operation) =>
                         {
-                            match operation_parser::parse_operation(statement)
-                            {
-                                Ok(operation) =>
-                                {
-                                    single_op.insert(operation_index, ("return".to_string(), operation, line_start+i));
-                                    operation_index += 1;
-                                }
-                                Err(error) =>
-                                {
-                                    parse_error!(error_manager, line_start+i, error.as_str());
-                                }
-                            }
+                            single_op.insert(operation_index, ("return".to_string(), operation, line_start+i));
+                            operation_index += 1;
                         }
-                        Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
+                        Err(error) =>
+                        {
+                            parse_error!(error_manager, line_start+i, error.as_str());
+                        }
                     }
                 }
                 else
@@ -194,7 +189,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
             {
                 if in_function
                 {
-                    match parse_call(exp)
+                    match call_parser::parse_call(exp)
                     {
                         Ok(result) => 
                         {
@@ -286,48 +281,74 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
     }
 }
 
-// Parses a function call into the name of the function, and the arguments.
-fn parse_call(call: &str) -> Result<(String, Vec<String>), String>
+pub fn get_expression_type(string: &str) -> Result<ExpressionType, String>
 {
-    let function: String;
-    let arguments: Vec<String>;
-    
-    if let Some(first) = call.split_once("(")
+    let mut buffer = String::new();
+    let mut started_call_or_function = false;
+
+    if string.is_empty()
     {
-        if first.1.len() > 0 && first.1.as_bytes()[first.1.len()-1] == b')'
+        return Ok(ExpressionType::None);
+    }
+
+    match string.to_lowercase().as_str()
+    {
+        "break" => {return Ok(ExpressionType::Break);}
+        "continue" => {return Ok(ExpressionType::Continue);}
+        "end" => {return Ok(ExpressionType::End);}
+        _ => ()
+    };
+
+    // Comments
+    if string.starts_with("//") || string.starts_with("#")
+    {
+        return Ok(ExpressionType::Comment);
+    }
+
+    let mut peekable = string.chars().peekable();
+    while let Some(c) = peekable.next()
+    {
+        if !started_call_or_function
         {
-            function = first.0.to_string();
-            
-            match utility::split_by(&first.1[0..first.1.len()-1], ',')
+            match c
             {
-                Ok(result) =>
-                {
-                    arguments = result;
-                }
-                Err(error) =>
-                {
-                    return Err(error);
-                }
+                c if c.is_alphanumeric() || c == '.' || c == '_' => buffer.push(c),
+                '=' => return Ok(ExpressionType::Assignment),
+                '(' => started_call_or_function = true,
+                c if utility::operations_contains(c) => (),
+                '"' | '\'' | ')' => (),
+                _ => return Err(format!("Failed to recognize character: '{}'", c))
             }
         }
+        // Check for the end of a function creation.
         else
         {
-            return Err("No closing parenthesis found on function call.".to_string());
+            if let ':' = c
+            {
+                return Ok(ExpressionType::Function);
+            }
+        }
+
+        // Buffer check for the start of an expression type.
+        // Later parsing will check for errors in missing colons or arguments.
+        match buffer.to_lowercase().as_str()
+        {
+            "loop" => return Ok(ExpressionType::Loop),
+            "if" => return Ok(ExpressionType::If),
+            "elif"|"elseif" => return Ok(ExpressionType::Elif),
+            "else" => {if let Some('i') = peekable.peek() {} else { return Ok(ExpressionType::Else)}},
+            "return" => return Ok(ExpressionType::Return),
+            "use"|"import"|"include"|"using" => return Ok(ExpressionType::Library),
+            _ => ()
         }
     }
-    else
+
+    // Found a call but not a function.
+    // (Char search closed out before finding a colon.)
+    if started_call_or_function
     {
-        return Err("Failed to parse call.\nInvalid function.".to_string());
+        return Ok(ExpressionType::Call);
     }
 
-    Ok((function, arguments))
-}
-
-fn parse_return(statement: &str) -> Result<&str, String>
-{
-    let expression: &str;
-    
-    expression = statement.trim_start_matches("return");
-
-    Ok(expression)
+    Err("Unkown expression.".to_string())
 }

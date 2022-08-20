@@ -1,4 +1,4 @@
-use crate::drython::utility::ExpressionType;
+use super::ExpressionType;
 
 pub fn parse_scope(exp: &str, expression_type: &ExpressionType) -> Result<(Option<String>, Option<String>), String>
 {

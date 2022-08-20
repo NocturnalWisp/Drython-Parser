@@ -15,6 +15,7 @@ pub enum IsToken
     IsFloat,
     IsBool,
     IsString,
+    IsChar,
     IsCollection,
     IsNone
 }
@@ -38,6 +39,7 @@ impl PartialEq<Token> for IsToken
             (IsToken::IsFloat, Token::Float(_)) => true,
             (IsToken::IsBool, Token::Bool(_)) => true,
             (IsToken::IsString, Token::String(_)) => true,
+            (IsToken::IsChar, Token::Char(_)) => true,
             (IsToken::IsCollection, Token::Collection(_)) => true,
             _ => false
         }
@@ -52,6 +54,7 @@ impl PartialEq<Token> for IsToken
             (IsToken::IsFloat, Token::Float(_)) => false,
             (IsToken::IsBool, Token::Bool(_)) => false,
             (IsToken::IsString, Token::String(_)) => false,
+            (IsToken::IsChar, Token::Char(_)) => false,
             (IsToken::IsCollection, Token::Collection(_)) => false,
             _ => false
         }
