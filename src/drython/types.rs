@@ -50,6 +50,7 @@ pub enum Token
     Float(f32),
     Bool(bool),
     String(String),
+    Char(char),
     Collection(Vec<Token>),
     
     Var(String),

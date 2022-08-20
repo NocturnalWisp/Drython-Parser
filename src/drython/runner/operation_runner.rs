@@ -31,15 +31,20 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
 
                 // Run operations based on whether the token has been handled or not.
                 // Unwrap because errors automatically return from this function before.
-                if let Some(result) = match (handled_1.unwrap(), handled_2.unwrap())
+                let ran_operation = match (handled_1.unwrap(), handled_2.unwrap())
                 {
                     (Some(token1), Some(token2)) => run_operation_by_type(&token1, &token2, operator),
                     (None, Some(token2)) => run_operation_by_type(unhandled1, &token2, operator),
                     (Some(token1), None) => run_operation_by_type(&token1, unhandled2, operator),
                     _ => run_operation_by_type(unhandled1, unhandled2, operator)
-                }
+                };
+                match ran_operation
                 {
-                    stack.push(result);
+                    Some(result) =>
+                    {
+                        stack.push(result);
+                    }
+                    None => { return Err(format!("Cannot apply operation '{}' to '{}' and '{}'.", operator, unhandled1, unhandled2)); }
                 }
             }
         }

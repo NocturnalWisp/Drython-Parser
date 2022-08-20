@@ -24,6 +24,7 @@ fn print(args: Vec<Token>) -> Result<Option<Token>, String>
         Token::Int(i) => println!("{}", i),
         Token::Float(f) => println!("{}", f),
         Token::String(s) => println!("{}", s),
+        Token::Char(c) => println!("{}", c),
         Token::Bool(b) => println!("{}", b),
         Token::Collection(c) => println!("{:?}", c),
         _ => { return Err(format!("Cannot print a variable of this type: {:?}", args[0])); }

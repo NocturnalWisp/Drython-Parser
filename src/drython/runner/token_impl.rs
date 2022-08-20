@@ -1,38 +1,66 @@
 use crate::drython::types::Token;
 use std::{convert::From, fmt::{self, Display}};
 
+// Match arms for most functions.
+macro_rules! TI
+{
+    ($a: tt, $b: tt, $arg1: ident, $arg2: ident) =>
+    {
+        (Token::$a($arg1), Token::$b($arg2)) | (Token::$b($arg2), Token::$a($arg1))
+    };
+}
+
+// Match arms for single arm in most functions.
+macro_rules! TIS
+{
+    ($t: tt, $arg1: ident, $arg2: ident) =>
+    {
+        (Token::$t($arg1), Token::$t($arg2))
+    };
+    ($a: tt, $b: tt, $arg1: ident, $arg2: ident) =>
+    {
+        (Token::$a($arg1), Token::$b($arg2))
+    };
+}
+
+#[allow(unused_variables)]
 impl Token
 {
     pub fn add(&self, other: &Token) -> Option<Token>
     {
         match (self, other)
         {
-            (Token::Int(a), Token::Int(b)) => Some(Token::Int(a + b)),
-            (Token::Float(a), Token::Float(b)) => Some(Token::Float(*a as f32 + b)),
-            (Token::Int(a), Token::Float(b)) => Some(Token::Float(*a as f32 + b)),
-            (Token::Float(a), Token::Int(b)) => Some(Token::Float(a + *b as f32)),
-            
-            (Token::Bool(a), Token::Bool(b)) => Some(Token::Int(*a as i32 + *b as i32)),
-            (Token::Int(a), Token::Bool(b)) => Some(Token::Int(a + *b as i32)),
-            (Token::Float(a), Token::Bool(b)) => Some(Token::Float(a + (*b as i32) as f32)),
-            (Token::Bool(a), Token::Int(b)) => Some(Token::Int(*a as i32 + b)),
-            (Token::Bool(a), Token::Float(b)) => Some(Token::Float((*a as i32) as f32 + b)),
+            TIS!(Int, a, b) => Some(Token::Int(a + b)),
+            TIS!(Float, a, b) => Some(Token::Float(*a as f32 + b)),
+            TIS!(Bool, a, b) => Some(Token::Int(*a as i32 + *b as i32)),
+            TIS!(Char, a, b) => Some(Token::String(format!("{}{}", a, b))),
 
-            (Token::String(a), Token::Int(b)) => Some(Token::String(format!("{}{}", a, b))),
-            (Token::String(a), Token::Float(b)) => Some(Token::String(format!("{}{}", a, b))),
-            (Token::String(a), Token::Bool(b)) => Some(Token::String(format!("{}{}", a, b))),
+            TI!(Int, Float, a, b) =>
+                Some(Token::Float(*a as f32 + b)),
+            TI!(Int, Bool, a, b) =>
+                Some(Token::Int(a + *b as i32)),
+            TI!(Float, Bool, a, b) =>
+                Some(Token::Float(a + (*b as i32) as f32)),
 
-            (Token::String(a), Token::String(b)) => Some(Token::String(format!("{}{}", a, b))),
-            (Token::Int(a), Token::String(b)) => Some(Token::String(format!("{}{}", a, b))),
-            (Token::Float(a), Token::String(b)) => Some(Token::String(format!("{}{}", a, b))),
-            (Token::Bool(a), Token::String(b)) => Some(Token::String(format!("{}{}", a, b))),
-            
-            (Token::Collection(a), Token::Int(_)) => Some(Token::collection_add(a, other)),
-            (Token::Collection(a), Token::Float(_)) => Some(Token::collection_add(a, other)),
-            (Token::Collection(a), Token::String(_)) => Some(Token::collection_add(a, other)),
-            (Token::Int(_), Token::Collection(b)) => Some(Token::collection_add(b, self)),
-            (Token::Float(_), Token::Collection(b)) => Some(Token::collection_add(b, self)),
-            (Token::String(_), Token::Collection(b)) => Some(Token::collection_add(b, self)),
+            TI!(String, Int, a, b) => Some(Token::String(format!("{}{}", a, b))),
+            TI!(String, Float, a, b) => Some(Token::String(format!("{}{}", a, b))),
+            TI!(String, Bool, a, b) => Some(Token::String(format!("{}{}", a, b))),
+
+            TI!(Char, Int, a, b) => Some(Token::String(format!("{}{}", a, b))),
+            TI!(Char, Float, a, b) => Some(Token::String(format!("{}{}", a, b))),
+            TI!(Char, Bool, a, b) => Some(Token::String(format!("{}{}", a, b))),
+
+            TIS!(Collection, Int, a, b) => Some(Token::collection_add(a, other)),
+            TIS!(Int, Collection, a, b) => Some(Token::collection_add(b, self)),
+
+            TIS!(Collection, Float, a, b) => Some(Token::collection_add(a, other)),
+            TIS!(Float, Collection, a, b) => Some(Token::collection_add(b, self)),
+
+            TIS!(Collection, String, a, b) => Some(Token::collection_add(a, other)),
+            TIS!(String, Collection, a, b) => Some(Token::collection_add(b, self)),
+
+            TIS!(Collection, Bool, a, b) => Some(Token::collection_add(a, other)),
+            TIS!(Bool, Collection, a, b) => Some(Token::collection_add(b, self)),
             _ => None
         }
     }
@@ -46,23 +74,24 @@ impl Token
     {
         match (self, other)
         {
-            (Token::Int(a), Token::Int(b)) => Some(Token::Int(a - b)),
-            (Token::Float(a), Token::Float(b)) => Some(Token::Float(*a as f32 - b)),
-            (Token::Int(a), Token::Float(b)) => Some(Token::Float(*a as f32 - b)),
-            (Token::Float(a), Token::Int(b)) => Some(Token::Float(a - *b as f32)),
+            TIS!(Int, a, b) => Some(Token::Int(a - b)),
+            TIS!(Float, a, b) => Some(Token::Float(a - b)),
+            TIS!(Bool, a, b) => Some(Token::Int(*a as i32 - *b as i32)),
+
+            TIS!(Int, Float, a, b) => Some(Token::Float(*a as f32 - b)),
+            TIS!(Float, Int, a, b) => Some(Token::Float(a - *b as f32)),
             
-            (Token::Bool(a), Token::Bool(b)) => Some(Token::Int(*a as i32 - *b as i32)),
-            (Token::Int(a), Token::Bool(b)) => Some(Token::Int(a - *b as i32)),
-            (Token::Float(a), Token::Bool(b)) => Some(Token::Float(a - (*b as i32) as f32)),
-            (Token::Bool(a), Token::Int(b)) => Some(Token::Int(*a as i32 - b)),
-            (Token::Bool(a), Token::Float(b)) => Some(Token::Float((*a as i32) as f32 - b)),
+            TIS!(Int, Bool, a, b) => Some(Token::Int(a - *b as i32)),
+            TIS!(Bool, Int, a, b) => Some(Token::Int(*a as i32 - b)),
+
+            TIS!(Float, Bool, a, b) => Some(Token::Float(a - (*b as i32) as f32)),
+            TIS!(Bool, Float, a, b) => Some(Token::Float((*a as i32) as f32 - b)),
             
-            (Token::Collection(a), Token::Int(_)) => Some(Token::collection_subtract(a, other)),
-            (Token::Collection(a), Token::Float(_)) => Some(Token::collection_subtract(a, other)),
-            (Token::Collection(a), Token::String(_)) => Some(Token::collection_subtract(a, other)),
-            (Token::Int(_), Token::Collection(b)) => Some(Token::collection_subtract(b, self)),
-            (Token::Float(_), Token::Collection(b)) => Some(Token::collection_subtract(b, self)),
-            (Token::String(_), Token::Collection(b)) => Some(Token::collection_subtract(b, self)),
+            TIS!(Collection, Int, a, b) => Some(Token::collection_subtract(a, other)),
+            TIS!(Int, Collection, a, b) => Some(Token::collection_subtract(b, self)),
+
+            TIS!(Collection, Float, a, b) => Some(Token::collection_subtract(a, other)),
+            TIS!(Float, Collection, a, b) => Some(Token::collection_subtract(b, self)),
             _ => None
         }
     }
@@ -76,23 +105,19 @@ impl Token
     {
         match (self, other)
         {
-            (Token::Int(a), Token::Int(b)) => Some(Token::Int(a * b)),
-            (Token::Float(a), Token::Float(b)) => Some(Token::Float(*a as f32 * b)),
-            (Token::Int(a), Token::Float(b)) => Some(Token::Float(*a as f32 * b)),
-            (Token::Float(a), Token::Int(b)) => Some(Token::Float(a * *b as f32)),
+            TIS!(Int, a, b) => Some(Token::Int(a * b)),
+            TIS!(Float, a, b) => Some(Token::Float(*a as f32 * b)),
+            TIS!(Bool, a, b) => Some(Token::Int(*a as i32 * *b as i32)),
+
+            TI!(Int, Float, a, b) => Some(Token::Float(*a as f32 * b)),
+            TI!(Int, Bool, a, b) => Some(Token::Int(a * *b as i32)),
+            TI!(Float, Bool, a, b) => Some(Token::Float(a * (*b as i32) as f32)),
             
-            (Token::Bool(a), Token::Bool(b)) => Some(Token::Int(*a as i32 * *b as i32)),
-            (Token::Int(a), Token::Bool(b)) => Some(Token::Int(a * *b as i32)),
-            (Token::Float(a), Token::Bool(b)) => Some(Token::Float(a * (*b as i32) as f32)),
-            (Token::Bool(a), Token::Int(b)) => Some(Token::Int(*a as i32 * b)),
-            (Token::Bool(a), Token::Float(b)) => Some(Token::Float((*a as i32) as f32 * b)),
-            
-            (Token::Collection(a), Token::Int(_)) => Some(Token::collection_multiply(a, other)),
-            (Token::Collection(a), Token::Float(_)) => Some(Token::collection_multiply(a, other)),
-            (Token::Collection(a), Token::String(_)) => Some(Token::collection_multiply(a, other)),
-            (Token::Int(_), Token::Collection(b)) => Some(Token::collection_multiply(b, self)),
-            (Token::Float(_), Token::Collection(b)) => Some(Token::collection_multiply(b, self)),
-            (Token::String(_), Token::Collection(b)) => Some(Token::collection_multiply(b, self)),
+            TIS!(Collection, Int, a, b) => Some(Token::collection_multiply(a, other)),
+            TIS!(Int, Collection, a, b) => Some(Token::collection_multiply(b, self)),
+
+            TIS!(Collection, Float, a, b) => Some(Token::collection_multiply(a, other)),
+            TIS!(Float, Collection, a, b) => Some(Token::collection_multiply(b, self)),
             _ => None
         }
     }
@@ -106,23 +131,24 @@ impl Token
     {
         match (self, other)
         {
-            (Token::Int(a), Token::Int(b)) => Some(Token::Int(a / b)),
-            (Token::Float(a), Token::Float(b)) => Some(Token::Float(*a as f32 / b)),
-            (Token::Int(a), Token::Float(b)) => Some(Token::Float(*a as f32 / b)),
-            (Token::Float(a), Token::Int(b)) => Some(Token::Float(a / *b as f32)),
+            TIS!(Int, a, b) => Some(Token::Int(a / b)),
+            TIS!(Float, a, b) => Some(Token::Float(*a as f32 / b)),
+            TIS!(Bool, a, b) => Some(Token::Int(*a as i32 / *b as i32)),
+
+            TIS!(Int, Float, a, b) => Some(Token::Float(*a as f32 / b)),
+            TIS!(Float, Int, a, b) => Some(Token::Float(a / *b as f32)),
             
-            (Token::Bool(a), Token::Bool(b)) => Some(Token::Int(*a as i32 / *b as i32)),
-            (Token::Int(a), Token::Bool(b)) => Some(Token::Int(a / *b as i32)),
-            (Token::Float(a), Token::Bool(b)) => Some(Token::Float(a / (*b as i32) as f32)),
-            (Token::Bool(a), Token::Int(b)) => Some(Token::Int(*a as i32 / b)),
-            (Token::Bool(a), Token::Float(b)) => Some(Token::Float((*a as i32) as f32 / b)),
+            TIS!(Int, Bool, a, b) => Some(Token::Int(a / *b as i32)),
+            TIS!(Bool, Int, a, b) => Some(Token::Int(*a as i32 / b)),
+
+            TIS!(Float, Bool, a, b) => Some(Token::Float(a / (*b as i32) as f32)),
+            TIS!(Bool, Float, a, b) => Some(Token::Float((*a as i32) as f32 / b)),
            
-            (Token::Collection(a), Token::Int(_)) => Some(Token::collection_divide(a, other)),
-            (Token::Collection(a), Token::Float(_)) => Some(Token::collection_divide(a, other)),
-            (Token::Collection(a), Token::String(_)) => Some(Token::collection_divide(a, other)),
-            (Token::Int(_), Token::Collection(b)) => Some(Token::collection_divide(b, self)),
-            (Token::Float(_), Token::Collection(b)) => Some(Token::collection_divide(b, self)),
-            (Token::String(_), Token::Collection(b)) => Some(Token::collection_divide(b, self)),
+            TIS!(Collection, Int, a, b) => Some(Token::collection_divide(a, other)),
+            TIS!(Int, Collection, a, b) => Some(Token::collection_divide(b, self)),
+
+            TIS!(Collection, Float, a, b) => Some(Token::collection_divide(a, other)),
+            TIS!(Float, Collection, a, b) => Some(Token::collection_divide(b, self)),
             _ => None
         }
     }
@@ -136,23 +162,24 @@ impl Token
     {
         match (self, other)
         {
-            (Token::Int(a), Token::Int(b)) => Some(Token::Int(a % b)),
-            (Token::Float(a), Token::Float(b)) => Some(Token::Float(*a as f32 % b)),
-            (Token::Int(a), Token::Float(b)) => Some(Token::Float(*a as f32 % b)),
-            (Token::Float(a), Token::Int(b)) => Some(Token::Float(a % *b as f32)),
+            TIS!(Int, a, b) => Some(Token::Int(a % b)),
+            TIS!(Float, a, b) => Some(Token::Float(*a as f32 % b)),
+            TIS!(Bool, a, b) => Some(Token::Int(*a as i32 % *b as i32)),
+
+            TIS!(Int, Float, a, b) => Some(Token::Float(*a as f32 % b)),
+            TIS!(Float, Int, a, b) => Some(Token::Float(a % *b as f32)),
             
-            (Token::Bool(a), Token::Bool(b)) => Some(Token::Int(*a as i32 % *b as i32)),
-            (Token::Int(a), Token::Bool(b)) => Some(Token::Int(a % *b as i32)),
-            (Token::Float(a), Token::Bool(b)) => Some(Token::Float(a % (*b as i32) as f32)),
-            (Token::Bool(a), Token::Int(b)) => Some(Token::Int(*a as i32 % b)),
-            (Token::Bool(a), Token::Float(b)) => Some(Token::Float((*a as i32) as f32 % b)),
+            TIS!(Int, Bool, a, b) => Some(Token::Int(a % *b as i32)),
+            TIS!(Bool, Int, a, b) => Some(Token::Int(*a as i32 % b)),
+
+            TIS!(Float, Bool, a, b) => Some(Token::Float(a % (*b as i32) as f32)),
+            TIS!(Bool, Float, a, b) => Some(Token::Float((*a as i32) as f32 % b)),
             
-            (Token::Collection(a), Token::Int(_)) => Some(Token::collection_modulos(a, other)),
-            (Token::Collection(a), Token::Float(_)) => Some(Token::collection_modulos(a, other)),
-            (Token::Collection(a), Token::String(_)) => Some(Token::collection_modulos(a, other)),
-            (Token::Int(_), Token::Collection(b)) => Some(Token::collection_modulos(b, self)),
-            (Token::Float(_), Token::Collection(b)) => Some(Token::collection_modulos(b, self)),
-            (Token::String(_), Token::Collection(b)) => Some(Token::collection_modulos(b, self)),
+            TIS!(Collection, Int, a, b) => Some(Token::collection_modulos(a, other)),
+            TIS!(Int, Collection, a, b) => Some(Token::collection_modulos(b, self)),
+
+            TIS!(Collection, Float, a, b) => Some(Token::collection_modulos(a, other)),
+            TIS!(Float, Collection, a, b) => Some(Token::collection_modulos(b, self)),
             _ => None
         }
     }
@@ -166,24 +193,24 @@ impl Token
     {
         match (self, other)
         {
-            (Token::Int(a), Token::Int(b)) => Some(Token::Bool(*a != 0 && *b != 0)),
-            (Token::Float(a), Token::Float(b)) => Some(Token::Bool(*a != 0.0 && *b != 0.0)),
-            (Token::Int(a), Token::Float(b)) => Some(Token::Bool(*a != 0 && *b != 0.0)),
-            (Token::Float(a), Token::Int(b)) => Some(Token::Bool(*a != 0.0 && *b != 0)),
+            TIS!(Int, a, b) => Some(Token::Bool(*a != 0 && *b != 0)),
+            TIS!(Float, a, b) => Some(Token::Bool(*a != 0.0 && *b != 0.0)),
+            TIS!(Bool, a, b) => Some(Token::Bool(*a && *b)),
+
+            TI!(Int, Float, a, b) => Some(Token::Bool(*a != 0 && *b != 0.0)),
             
-            (Token::Bool(a), Token::Bool(b)) => Some(Token::Bool(*a && *b)),
-            (Token::Int(a), Token::Bool(b)) => Some(Token::Bool(*a != 0 && *b)),
-            (Token::Float(a), Token::Bool(b)) => Some(Token::Bool(*a != 0.0 && *b)),
-            (Token::Bool(a), Token::Int(b)) => Some(Token::Bool(*a && *b != 0)),
-            (Token::Bool(a), Token::Float(b)) => Some(Token::Bool(*a && *b != 0.0)),
+            TI!(Int, Bool, a, b) => Some(Token::Bool(*a != 0 && *b)),
+
+            TI!(Float, Bool, a, b) => Some(Token::Bool(*a != 0.0 && *b)),
             
-            (Token::Collection(a), Token::Int(_)) => Some(Token::collection_and(a, other)),
-            (Token::Collection(a), Token::Float(_)) => Some(Token::collection_and(a, other)),
-            (Token::Collection(a), Token::Bool(_)) => Some(Token::collection_and(a, other)),
-            (Token::Collection(a), Token::String(_)) => Some(Token::collection_and(a, other)),
-            (Token::Int(_), Token::Collection(b)) => Some(Token::collection_and(b, self)),
-            (Token::Float(_), Token::Collection(b)) => Some(Token::collection_and(b, self)),
-            (Token::String(_), Token::Collection(b)) => Some(Token::collection_and(b, self)),
+            TIS!(Collection, Int, a, b) => Some(Token::collection_and(a, other)),
+            TIS!(Int, Collection, a, b) => Some(Token::collection_and(b, self)),
+
+            TIS!(Collection, Float, a, b) => Some(Token::collection_and(a, other)),
+            TIS!(Float, Collection, a, b) => Some(Token::collection_and(b, self)),
+
+            TIS!(Collection, Bool, a, b) => Some(Token::collection_and(a, other)),
+            TIS!(Bool, Collection, a, b) => Some(Token::collection_and(b, self)),
             _ => None
         }
     }
@@ -192,30 +219,29 @@ impl Token
     {
         Token::Collection(collection.iter().map(|x| x.and(other_token).unwrap_or(Token::Null)).collect())
     }
-    
+
     pub fn or(&self, other: &Token) -> Option<Token>
     {
         match (self, other)
         {
-            (Token::Int(a), Token::Int(b)) => Some(Token::Bool(*a != 0 || *b != 0)),
-            (Token::Float(a), Token::Float(b)) => Some(Token::Bool(*a != 0.0 || *b != 0.0)),
-            (Token::Int(a), Token::Float(b)) => Some(Token::Bool(*a != 0 || *b != 0.0)),
-            (Token::Float(a), Token::Int(b)) => Some(Token::Bool(*a != 0.0 || *b != 0)),
+            TIS!(Int, a, b) => Some(Token::Bool(*a != 0 || *b != 0)),
+            TIS!(Float, a, b) => Some(Token::Bool(*a != 0.0 || *b != 0.0)),
+            TIS!(Bool, a, b) => Some(Token::Bool(*a || *b)),
+
+            TI!(Float, Int, a, b) => Some(Token::Bool(*a != 0.0 || *b != 0)),
             
-            (Token::Bool(a), Token::Bool(b)) => Some(Token::Bool(*a || *b)),
-            (Token::Int(a), Token::Bool(b)) => Some(Token::Bool(*a != 0 || *b)),
-            (Token::Float(a), Token::Bool(b)) => Some(Token::Bool(*a != 0.0 || *b)),
-            (Token::Bool(a), Token::Int(b)) => Some(Token::Bool(*a || *b != 0)),
-            (Token::Bool(a), Token::Float(b)) => Some(Token::Bool(*a || *b != 0.0)),
+            TI!(Bool, Int, a, b) => Some(Token::Bool(*a || *b != 0)),
+
+            TI!(Bool, Float, a, b) => Some(Token::Bool(*a || *b != 0.0)),
             
-            (Token::Collection(a), Token::Int(_)) => Some(Token::collection_or(a, other)),
-            (Token::Collection(a), Token::Float(_)) => Some(Token::collection_or(a, other)),
-            (Token::Collection(a), Token::Bool(_)) => Some(Token::collection_or(a, other)),
-            (Token::Collection(a), Token::String(_)) => Some(Token::collection_or(a, other)),
-            (Token::Int(_), Token::Collection(b)) => Some(Token::collection_or(b, self)),
-            (Token::Float(_), Token::Collection(b)) => Some(Token::collection_or(b, self)),
-            (Token::Bool(_), Token::Collection(b)) => Some(Token::collection_or(b, self)),
-            (Token::String(_), Token::Collection(b)) => Some(Token::collection_or(b, self)),
+            TIS!(Collection, Int, a, b) => Some(Token::collection_or(a, other)),
+            TIS!(Int, Collection, a, b) => Some(Token::collection_or(b, self)),
+
+            TIS!(Collection, Float, a, b) => Some(Token::collection_or(a, other)),
+            TIS!(Float, Collection, a, b) => Some(Token::collection_or(b, self)),
+
+            TIS!(Collection, Bool, a, b) => Some(Token::collection_or(a, other)),
+            TIS!(Bool, Collection, a, b) => Some(Token::collection_or(b, self)),
             _ => None
         }
     }
@@ -242,168 +268,134 @@ impl Token
     {
         match (self, other)
         {
-            (Token::Int(a), Token::Int(b)) => Some(Token::Bool(a == b)),
-            (Token::Float(a), Token::Float(b)) => Some(Token::Bool(a == b)),
-            (Token::Int(a), Token::Float(b)) => Some(Token::Bool((*a as f32) == *b)),
-            (Token::Float(a), Token::Int(b)) => Some(Token::Bool(*a == (*b as f32))),
+            TIS!(Int, a, b) => Some(Token::Bool(a == b)),
+            TIS!(Float, a, b) => Some(Token::Bool(a == b)),
+            TIS!(Bool, a, b) => Some(Token::Bool(*a == *b)),
+            TIS!(String, a, b) => Some(Token::Bool(a == b)),
+            TIS!(Char, a, b) => Some(Token::Bool(a == b)),
+
+            TI!(Int, Float, a, b) => Some(Token::Bool((*a as f32) == *b)),
+            TI!(Int, Char, a, b) => Some(Token::Bool(a.to_string() == b.to_string())),
+            TI!(Int, Bool, a, b) => Some(Token::Bool((*a != 0) == *b)),
+            TI!(Float, Bool, a, b) => Some(Token::Bool((*a != 0.0) == *b)),
+
+            TI!(String, Char, a, b) => Some(Token::Bool(*a == b.to_string())),
+
+            TI!(String, Int, a, b) => Some(Token::Bool(*a == b.to_string())),
+            TI!(String, Float, a, b) => Some(Token::Bool(*a == b.to_string())),
+            TI!(String, Bool, a, b) => Some(Token::Bool(*a == b.to_string())),
             
-            (Token::Bool(a), Token::Bool(b)) => Some(Token::Bool(*a == *b)),
-            (Token::Int(a), Token::Bool(b)) => Some(Token::Bool((*a != 0) == *b)),
-            (Token::Float(a), Token::Bool(b)) => Some(Token::Bool((*a != 0.0) == *b)),
-            (Token::Bool(a), Token::Int(b)) => Some(Token::Bool(*a == (*b != 0))),
-            (Token::Bool(a), Token::Float(b)) => Some(Token::Bool(*a == (*b != 0.0))),
-            
-            (Token::Collection(a), Token::Int(_)) => Some(Token::collection_eq(a, other)),
-            (Token::Collection(a), Token::Float(_)) => Some(Token::collection_eq(a, other)),
-            (Token::Collection(a), Token::Bool(_)) => Some(Token::collection_eq(a, other)),
-            (Token::Collection(a), Token::String(_)) => Some(Token::collection_eq(a, other)),
-            (Token::Int(_), Token::Collection(b)) => Some(Token::collection_eq(b, self)),
-            (Token::Float(_), Token::Collection(b)) => Some(Token::collection_eq(b, self)),
-            (Token::Bool(_), Token::Collection(b)) => Some(Token::collection_eq(b, self)),
-            (Token::String(_), Token::Collection(b)) => Some(Token::collection_eq(b, self)),
+            TIS!(Collection, Int, a, b) => Some(Token::collection_eq(a, other)),
+            TIS!(Collection, Float, a, b) => Some(Token::collection_eq(a, other)),
+            TIS!(Collection, Bool, a, b) => Some(Token::collection_eq(a, other)),
+            TIS!(Collection, String, a, b) => Some(Token::collection_eq(a, other)),
+            TIS!(Collection, Char, a, b) => Some(Token::collection_eq(a, other)),
+            TIS!(Int, Collection, a, b) => Some(Token::collection_eq(b, self)),
+            TIS!(Float, Collection, a, b) => Some(Token::collection_eq(b, self)),
+            TIS!(Bool, Collection, a, b) => Some(Token::collection_eq(b, self)),
+            TIS!(String, Collection, a, b) => Some(Token::collection_eq(b, self)),
+            TIS!(Char, Collection, a, b) => Some(Token::collection_eq(b, self)),
             _ => None
         }
     }
 
     fn collection_eq(collection: &Vec<Token>, other_token: &Token) -> Token
     {
-        Token::Collection(collection.iter().map(|x| x.compare_eq(other_token).unwrap_or(Token::Null)).collect())
+        Token::Bool(collection.iter().all(|x| 
+                                            if let Some(Token::Bool(true)) = x.compare_eq(other_token)
+                                            {
+                                                true
+                                            } else {false}))
     }
 
     pub fn compare_neq(&self, other: &Token) -> Option<Token>
     {
-        match (self, other)
+        if let Some(Token::Bool(value)) = self.compare_eq(other)
         {
-            (Token::Int(a), Token::Int(b)) => Some(Token::Bool(a != b)),
-            (Token::Float(a), Token::Float(b)) => Some(Token::Bool(a != b)),
-            (Token::Int(a), Token::Float(b)) => Some(Token::Bool((*a as f32) != *b)),
-            (Token::Float(a), Token::Int(b)) => Some(Token::Bool(*a != (*b as f32))),
-            
-            (Token::Bool(a), Token::Bool(b)) => Some(Token::Bool(*a != *b)),
-            (Token::Int(a), Token::Bool(b)) => Some(Token::Bool((*a != 0) != *b)),
-            (Token::Float(a), Token::Bool(b)) => Some(Token::Bool((*a != 0.0) != *b)),
-            (Token::Bool(a), Token::Int(b)) => Some(Token::Bool(*a != (*b != 0))),
-            (Token::Bool(a), Token::Float(b)) => Some(Token::Bool(*a != (*b != 0.0))),
-            
-            (Token::Collection(a), Token::Int(_)) => Some(Token::collection_neq(a, other)),
-            (Token::Collection(a), Token::Float(_)) => Some(Token::collection_neq(a, other)),
-            (Token::Collection(a), Token::Bool(_)) => Some(Token::collection_neq(a, other)),
-            (Token::Collection(a), Token::String(_)) => Some(Token::collection_neq(a, other)),
-            (Token::Int(_), Token::Collection(b)) => Some(Token::collection_neq(b, self)),
-            (Token::Float(_), Token::Collection(b)) => Some(Token::collection_neq(b, self)),
-            (Token::Bool(_), Token::Collection(b)) => Some(Token::collection_neq(b, self)),
-            (Token::String(_), Token::Collection(b)) => Some(Token::collection_neq(b, self)),
-            _ => None
+            Some(Token::Bool(!value))
         }
-    }
-
-    fn collection_neq(collection: &Vec<Token>, other_token: &Token) -> Token
-    {
-        Token::Collection(collection.iter().map(|x| x.compare_neq(other_token).unwrap_or(Token::Null)).collect())
+        else
+        {
+            None
+        }
     }
 
     pub fn compare_gte(&self, other: &Token) -> Option<Token>
     {
         match (self, other)
         {
-            (Token::Int(a), Token::Int(b)) => Some(Token::Bool(a >= b)),
-            (Token::Float(a), Token::Float(b)) => Some(Token::Bool(a >= b)),
-            (Token::Int(a), Token::Float(b)) => Some(Token::Bool((*a as f32) >= *b)),
-            (Token::Float(a), Token::Int(b)) => Some(Token::Bool(*a >= (*b as f32))),
+            TIS!(Int, a, b) => Some(Token::Bool(a >= b)),
+            TIS!(Float, a, b) => Some(Token::Bool(a >= b)),
+            TI!(Int, Float, a, b) => Some(Token::Bool((*a as f32) >= *b)),
             
-            (Token::Collection(a), Token::Int(_)) => Some(Token::collection_gte(a, other)),
-            (Token::Collection(a), Token::Float(_)) => Some(Token::collection_gte(a, other)),
-            (Token::Collection(a), Token::Bool(_)) => Some(Token::collection_gte(a, other)),
-            (Token::Collection(a), Token::String(_)) => Some(Token::collection_gte(a, other)),
-            (Token::Int(_), Token::Collection(b)) => Some(Token::collection_gte(b, self)),
-            (Token::Float(_), Token::Collection(b)) => Some(Token::collection_gte(b, self)),
-            (Token::Bool(_), Token::Collection(b)) => Some(Token::collection_gte(b, self)),
-            (Token::String(_), Token::Collection(b)) => Some(Token::collection_gte(b, self)),
+            TIS!(Collection, Int, a, b) => Some(Token::collection_gte(a, other)),
+            TIS!(Int, Collection, a, b) => Some(Token::collection_gte(b, self)),
+
+            TIS!(Collection, Float, a, b) => Some(Token::collection_gte(a, other)),
+            TIS!(Float, Collection, a, b) => Some(Token::collection_gte(b, self)),
             _ => None
         }
     }
 
     fn collection_gte(collection: &Vec<Token>, other_token: &Token) -> Token
     {
-        Token::Collection(collection.iter().map(|x| x.compare_gte(other_token).unwrap_or(Token::Null)).collect())
+        Token::Bool(collection.iter().all(|x| 
+                                            if let Some(Token::Bool(true)) = x.compare_gte(other_token)
+                                            {
+                                                true
+                                            } else {false}))
+    }
+
+    // Opposite of gte
+    pub fn compare_lt(&self, other: &Token) -> Option<Token>
+    {
+        if let Some(Token::Bool(value)) = self.compare_gte(other)
+        {
+            Some(Token::Bool(!value))
+        }
+        else
+        {
+            None
+        }
     }
 
     pub fn compare_gt(&self, other: &Token) -> Option<Token>
     {
         match (self, other)
         {
-            (Token::Int(a), Token::Int(b)) => Some(Token::Bool(a > b)),
-            (Token::Float(a), Token::Float(b)) => Some(Token::Bool(a > b)),
-            (Token::Int(a), Token::Float(b)) => Some(Token::Bool((*a as f32) > *b)),
-            (Token::Float(a), Token::Int(b)) => Some(Token::Bool(*a > (*b as f32))),
+            TIS!(Int, a, b) => Some(Token::Bool(a > b)),
+            TIS!(Float, a, b) => Some(Token::Bool(a > b)),
+            TI!(Int, Float, a, b) => Some(Token::Bool((*a as f32) > *b)),
             
-            (Token::Collection(a), Token::Int(_)) => Some(Token::collection_gt(a, other)),
-            (Token::Collection(a), Token::Float(_)) => Some(Token::collection_gt(a, other)),
-            (Token::Collection(a), Token::Bool(_)) => Some(Token::collection_gt(a, other)),
-            (Token::Collection(a), Token::String(_)) => Some(Token::collection_gt(a, other)),
-            (Token::Int(_), Token::Collection(b)) => Some(Token::collection_gt(b, self)),
-            (Token::Float(_), Token::Collection(b)) => Some(Token::collection_gt(b, self)),
-            (Token::Bool(_), Token::Collection(b)) => Some(Token::collection_gt(b, self)),
-            (Token::String(_), Token::Collection(b)) => Some(Token::collection_gt(b, self)),
+            TIS!(Collection, Int, a, b) => Some(Token::collection_gt(a, other)),
+            TIS!(Int, Collection, a, b) => Some(Token::collection_gt(b, self)),
+
+            TIS!(Collection, Float, a, b) => Some(Token::collection_gt(a, other)),
+            TIS!(Float, Collection, a, b) => Some(Token::collection_gt(b, self)),
             _ => None
         }
     }
 
     fn collection_gt(collection: &Vec<Token>, other_token: &Token) -> Token
     {
-        Token::Collection(collection.iter().map(|x| x.compare_gt(other_token).unwrap_or(Token::Null)).collect())
+        Token::Bool(collection.iter().all(|x| 
+                                            if let Some(Token::Bool(true)) = x.compare_gt(other_token)
+                                            {
+                                                true
+                                            } else {false}))
     }
 
+    // Opposite of gt
     pub fn compare_lte(&self, other: &Token) -> Option<Token>
     {
-        match (self, other)
+        if let Some(Token::Bool(value)) = self.compare_gt(other)
         {
-            (Token::Int(a), Token::Int(b)) => Some(Token::Bool(a <= b)),
-            (Token::Float(a), Token::Float(b)) => Some(Token::Bool(a <= b)),
-            (Token::Int(a), Token::Float(b)) => Some(Token::Bool((*a as f32) <= *b)),
-            (Token::Float(a), Token::Int(b)) => Some(Token::Bool(*a <= (*b as f32))),
-            
-            (Token::Collection(a), Token::Int(_)) => Some(Token::collection_lte(a, other)),
-            (Token::Collection(a), Token::Float(_)) => Some(Token::collection_lte(a, other)),
-            (Token::Collection(a), Token::Bool(_)) => Some(Token::collection_lte(a, other)),
-            (Token::Collection(a), Token::String(_)) => Some(Token::collection_lte(a, other)),
-            (Token::Int(_), Token::Collection(b)) => Some(Token::collection_lte(b, self)),
-            (Token::Float(_), Token::Collection(b)) => Some(Token::collection_lte(b, self)),
-            (Token::Bool(_), Token::Collection(b)) => Some(Token::collection_lte(b, self)),
-            (Token::String(_), Token::Collection(b)) => Some(Token::collection_lte(b, self)),
-            _ => None
+            Some(Token::Bool(!value))
         }
-    }
-
-    fn collection_lte(collection: &Vec<Token>, other_token: &Token) -> Token
-    {
-        Token::Collection(collection.iter().map(|x| x.compare_lte(other_token).unwrap_or(Token::Null)).collect())
-    }
-
-    pub fn compare_lt(&self, other: &Token) -> Option<Token>
-    {
-        match (self, other)
+        else
         {
-            (Token::Int(a), Token::Int(b)) => Some(Token::Bool(a < b)),
-            (Token::Float(a), Token::Float(b)) => Some(Token::Bool(a < b)),
-            (Token::Int(a), Token::Float(b)) => Some(Token::Bool((*a as f32) < *b)),
-            (Token::Float(a), Token::Int(b)) => Some(Token::Bool(*a < (*b as f32))),
-            
-            (Token::Collection(a), Token::Int(_)) => Some(Token::collection_lt(a, other)),
-            (Token::Collection(a), Token::Float(_)) => Some(Token::collection_lt(a, other)),
-            (Token::Collection(a), Token::Bool(_)) => Some(Token::collection_lt(a, other)),
-            (Token::Collection(a), Token::String(_)) => Some(Token::collection_lt(a, other)),
-            (Token::Int(_), Token::Collection(b)) => Some(Token::collection_lt(b, self)),
-            (Token::Float(_), Token::Collection(b)) => Some(Token::collection_lt(b, self)),
-            (Token::Bool(_), Token::Collection(b)) => Some(Token::collection_lt(b, self)),
-            (Token::String(_), Token::Collection(b)) => Some(Token::collection_lt(b, self)),
-            _ => None
+            None
         }
-    }
-
-    fn collection_lt(collection: &Vec<Token>, other_token: &Token) -> Token
-    {
-        Token::Collection(collection.iter().map(|x| x.compare_lt(other_token).unwrap_or(Token::Null)).collect())
     }
 }
 
@@ -437,6 +429,14 @@ impl From<String> for Token
     fn from(value: String) -> Self
     {
         Token::String(value)
+    }
+}
+
+impl From<char> for Token
+{
+    fn from(value: char) -> Self
+    {
+        Token::Char(value)
     }
 }
 
@@ -485,6 +485,18 @@ impl From<Token> for String
     }
 }
 
+impl From<Token> for char
+{
+    fn from(value: Token) -> Self
+    {
+        match value
+        {
+            Token::Char(c) => c,
+            _ => ' '
+        }
+    }
+}
+
 impl From<Token> for bool
 {
     fn from(value: Token) -> Self
@@ -507,6 +519,7 @@ impl Display for Token
             Token::Float(f) => f.to_string(),
             Token::Bool(b) => b.to_string(),
             Token::String(s) => format!("\"{}\"", s),
+            Token::Char(c) => format!("'{}'", c),
             Token::Collection(c) =>
             {
                 let mut s = String::new();

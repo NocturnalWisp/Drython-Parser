@@ -12,6 +12,7 @@ enum ParseTokenType
     None,
     Value,
     StringLiteral,
+    CharLiteral,
     Collection,
 
     Operator,
@@ -57,7 +58,8 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
         let current_char_type =
         {
             if c.is_alphanumeric() || c == '_' { ParseTokenType::Value }
-            else if c == '\'' || c == '"' { ParseTokenType::StringLiteral }
+            else if c == '"' { ParseTokenType::StringLiteral }
+            else if c == '\'' { ParseTokenType::CharLiteral }
             else if utility::operations_contains(c) { ParseTokenType::Operator }
             else if c == '(' || c == ')' { ParseTokenType::Parenth }
             else if c == '[' || c == ']' { ParseTokenType::Collection }
@@ -75,8 +77,9 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
                 // Follow the "a encounters b" pattern.
                 let skip_current = match (&last_token_type, &current_char_type)
                 {
-                    (PTT::Value, PTT::StringLiteral) =>
-                        {return Err("Unexpected string literal after value type.".to_string());},
+                    (PTT::Value, PTT::StringLiteral) |
+                    (PTT::Value, PTT::CharLiteral) =>
+                        {return Err("Unexpected literal after value type.".to_string());},
                     (PTT::Value, PTT::Collection) =>
                         {return Err("Unexpected collection after value type.".to_string());},
                     (PTT::Value, PTT::Operator) => false,
@@ -86,10 +89,12 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
 
                     (PTT::Operator, PTT::Value) => false,
                     (PTT::Operator, PTT::StringLiteral) => false,
+                    (PTT::Operator, PTT::CharLiteral) => false,
                     (PTT::Operator, PTT::Collection) => false,
                     (PTT::Operator, PTT::Parenth) => false,
                     
                     (PTT::StringLiteral, PTT::StringLiteral) => false,
+                    (PTT::CharLiteral, PTT::CharLiteral) => false,
 
                     (PTT::Collection, PTT::Collection) => false,
 
@@ -116,14 +121,17 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
 
             // Finish off value or string literal.
             let is_literal = last_token_type == ParseTokenType::StringLiteral;
+            let is_char = last_token_type == ParseTokenType::CharLiteral;
             let used_accessor = current_char_type == ParseTokenType::Accessor;
 
             if (last_token_type == ParseTokenType::Value && current_char_type != ParseTokenType::Value) ||
-               is_literal
+               is_literal || is_char
             {
                 // If current is parenth and this is not a string literal, it's the start of a call.
                 if current_char_type == ParseTokenType::Parenth &&
-                    last_token_type != ParseTokenType::StringLiteral && last_token_type != ParseTokenType::Collection
+                    last_token_type != ParseTokenType::StringLiteral &&
+                    last_token_type != ParseTokenType::CharLiteral &&
+                    last_token_type != ParseTokenType::Collection
                 {
                     // Start call but don't reset token_start.
                     last_token_type = ParseTokenType::Call;
@@ -131,9 +139,23 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
                 // Otherwise it's just a value.
                 else
                 {
-                    let token = parse_token_value(&string[token_start..token_end], is_literal);
+                    let value = &string[token_start..token_end];
+                    // Make sure if char, it is only one character.
+                    if is_char
+                    {
+                        if value.len() < 1
+                        {
+                            return Err(format!("Tried to create a char type with no characters."));
+                        }
+                        else if value.len() > 1
+                        {
+                            return Err(format!("Too many characters to create a valid char type."));
+                        }
+                    }
+
+                    let token = parse_token_value(&string[token_start..token_end], is_literal, is_char);
                     // Check for accessor on current char or after in the case of a string literal.
-                    if used_accessor || (is_literal && i+1 <string.len() && &string[i+1..i+2] == ".")
+                    if (used_accessor || (is_literal && i+1 <string.len() && &string[i+1..i+2] == ".")) && !is_char 
                     {
                         current_accessor_token = token;
                         
@@ -141,7 +163,7 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
                         token_start = i+1;
                         token_end = i+1;
 
-                        if is_literal
+                        if is_literal || is_char
                         {
                             token_start += 1;
                             token_end += 1;
@@ -156,7 +178,7 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
                         token_start = i;
                     }
 
-                    if is_literal || used_accessor
+                    if is_literal || is_char || used_accessor
                     {
                         continue;
                     }
@@ -342,7 +364,7 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
                     was_last = true;
                 }
 
-                let token = handle_accessor(&current_accessor_token, Box::new(parse_token_value(&string[token_start..token_end], is_literal)));
+                let token = handle_accessor(&current_accessor_token, Box::new(parse_token_value(&string[token_start..token_end], is_literal, is_char)));
 
                 if current_char_type == ParseTokenType::Accessor
                 {
@@ -387,7 +409,7 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
                 // This might be the last value.
                 if i == string.len()-1
                 {
-                    let mut token = parse_token_value(&string[token_start..i+1], false);
+                    let mut token = parse_token_value(&string[token_start..i+1], false, false);
 
                     if let Token::Null = current_accessor_token {}
                     else
@@ -410,6 +432,13 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
             else if current_char_type == ParseTokenType::StringLiteral
             {
                 last_token_type = ParseTokenType::StringLiteral;
+
+                token_start = i+1;
+                token_end = i+2;
+            }
+            else if current_char_type == ParseTokenType::CharLiteral
+            {
+                last_token_type = ParseTokenType::CharLiteral;
 
                 token_start = i+1;
                 token_end = i+2;
@@ -463,11 +492,16 @@ fn handle_accessor(prev_token: &Token, new_token: Box<Token>) -> Token
 }
 
 // Allows for the conversion from string to different types.
-fn parse_token_value<'a>(value: &'a str, literal: bool) -> Token
+fn parse_token_value<'a>(value: &'a str, literal: bool, is_char: bool) -> Token
 {
     if literal
     {
         return Token::String(value.to_string());
+    }
+
+    if is_char
+    {
+        return Token::Char(value.chars().next().unwrap());
     }
 
     if let Ok(result) = value.parse::<i32>()
