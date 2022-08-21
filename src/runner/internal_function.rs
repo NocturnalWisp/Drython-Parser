@@ -1,8 +1,8 @@
-use crate::drython::types::{Runner, Token, ExpressionList};
+use crate::types::{Runner, Token, ExpressionList};
 use std::collections::HashMap;
 
 use super::operation_runner::run_operation;
-use crate::drython::parser::operation_parser::parse_operation;
+use crate::parser::operation_parser::parse_operation;
 
 impl Runner
 {

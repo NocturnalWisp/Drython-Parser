@@ -1,4 +1,4 @@
-use crate::drython::types::{Token::{self, *}, RegisteredFunction, RegisteredVariable};
+use crate::types::{Token::{self, *}, RegisteredFunction, RegisteredVariable};
 
 use super::{FunctionCall, attach, register_function_return};
 

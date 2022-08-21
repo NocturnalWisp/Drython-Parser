@@ -1,5 +1,4 @@
-use crate::drython::types::{RegisteredFunction, RegisteredVariable};
-use crate::drython::types::Token;
+use crate::types::{Token, RegisteredFunction, RegisteredVariable};
 use super::{expect, IsToken};
 
 pub fn register_functs(functions: &mut Vec<RegisteredFunction>)

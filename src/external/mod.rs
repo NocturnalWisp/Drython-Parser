@@ -1,4 +1,4 @@
-use super::types::{Token, DynamicFunctionCall, RegisteredFunction, RegisteredVariable};
+use crate::types::{Token, DynamicFunctionCall, RegisteredFunction, RegisteredVariable};
 
 mod vector;
 pub mod auto;

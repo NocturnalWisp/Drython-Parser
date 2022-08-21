@@ -1,5 +1,5 @@
-use super::super::types::Runner;
-use super::super::types::error::*;
+use crate::types::Runner;
+use crate::types::error::*;
 
 pub fn test_runner(runner: &mut Runner, error_manager: &mut ErrorManager)
 {

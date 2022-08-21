@@ -6,15 +6,12 @@ mod internal_function;
 
 use std::collections::HashMap;
 
-use crate::Parser;
+use crate::{types::{Runner, Token, ExpressionList, RegisteredFunction, RegisteredVariable}, utility, external};
+use crate::external::auto;
+use crate::types::Parser;
+use crate::types::error::*;
 
 use self::operation_runner::run_operation;
-
-use super::{types::{Runner, Token, ExpressionList, RegisteredFunction, RegisteredVariable}, utility, external};
-
-use super::external::auto;
-
-use crate::drython::types::error::*;
 
 impl Runner
 {

@@ -1,8 +1,7 @@
 use std::collections::VecDeque;
 
-use crate::drython::types::Token;
-
-use crate::drython::utility;
+use crate::types::Token;
+use crate::utility;
 
 // Used internally for parsing tokens from an operation.
 // (Without the values associated with Types::Token)

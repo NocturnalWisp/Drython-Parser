@@ -1,4 +1,4 @@
-use crate::drython::types::Token;
+use crate::types::Token;
 use std::{convert::From, fmt::{self, Display}};
 
 // Match arms for most functions.

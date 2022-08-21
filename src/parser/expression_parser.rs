@@ -5,14 +5,12 @@ mod call_parser;
 
 use std::collections::HashMap;
 
-use crate::drython::types::Token;
+use crate::utility;
+use crate::types::{Token, ExpressionList, error::*};
 
-use super::{utility, operation_parser, ExpressionType};
-use super::types::ExpressionList;
 use super::variable_parser::parse_var;
+use super::{operation_parser, ExpressionType};
 use scope_parser::parse_scope;
-
-use super::types::error::*;
 
 pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_manager: &mut ErrorManager, in_expression: &ExpressionType, in_function: bool) -> ExpressionList
 {
