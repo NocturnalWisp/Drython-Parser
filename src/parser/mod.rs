@@ -71,20 +71,20 @@ impl Parser
             Parser::handle_content_replace(&contents, error_manager);
 
         // Determining Script Type.
-        let first_line = &lines[0][2..].trim_end_matches(";");
-        let script_type = ScriptType::from_string(first_line);
+        // let first_line = &lines[0][2..].trim_end_matches(";");
+        // let script_type = ScriptType::from_string(first_line);
 
-        if let ScriptType::None = script_type
-        {
-            return  Err(format!("Unexpected script type: {}", first_line));
-        }
+        // if let ScriptType::None = script_type
+        // {
+        //     return  Err(format!("Unexpected script type: {}", first_line));
+        // }
 
         // Parse global expressions.
-        let global_expressions = parse_expressions(&lines[1..].to_vec(), 2, error_manager, &ExpressionType::None, false);
+        let global_expressions = parse_expressions(&lines[0..].to_vec(), 0, error_manager, &ExpressionType::None, false);
 
         Ok(Parser
         {
-            script_type,
+            script_type: ScriptType::None,
             global_expressions,
         })
     }
