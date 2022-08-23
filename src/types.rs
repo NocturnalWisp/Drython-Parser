@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc, cell::RefCell};
 
 use super::script_type::ScriptType;
 
@@ -79,9 +79,15 @@ pub struct Operation
     pub b: Token,
 }
 
+pub trait VariableReference {}
+
+pub type VarRef = Box<dyn Fn(Rc<RefCell<dyn VariableReference>>, String, Token)>;
+
 pub struct Runner
 {
     pub parser: Parser,
     pub external_functions: HashMap<String, DynamicFunctionCall>,
-    pub vars: HashMap<String, Token>
+    pub vars: HashMap<String, Token>,
+    // A collection of variable references to external variables.
+    pub var_refs: HashMap<String, (Rc<RefCell<dyn VariableReference>>, VarRef)>,
 }

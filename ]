@@ -4,9 +4,8 @@ mod token_impl;
 
 mod internal_function;
 
-use crate::types::VariableReference;
 use core::cell::RefCell;
-
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::HashMap;
 
@@ -215,7 +214,7 @@ impl Runner
         where Token: From<I>
     {
         self.vars.insert(name.clone(), Token::from(initial_value));
-        self.var_refs.insert(name, (target_obj, event_fn));
+        self.var_refs.insert(name, event_fn);
 
         self
     }

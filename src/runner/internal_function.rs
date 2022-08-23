@@ -66,8 +66,17 @@ impl Runner
                                         vars.entry(string.to_string()).and_modify(
                                             |x|
                                             {
-                                                *x = result
+                                                *x = result.clone()
                                             });
+
+                                        // Check for external references.
+                                        if self.var_refs.contains_key(string)
+                                        {
+                                            if let Some(function) = self.var_refs.get(string)
+                                            {
+                                                function.1(function.0.clone(), string.to_string(), result);
+                                            }
+                                        }
                                     }
                                     else
                                     {
