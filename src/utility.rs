@@ -41,8 +41,9 @@ pub fn split_by(string: &str, split: char) -> Result<Vec<String>, String>
     Ok(result)
 }
 
-pub const OPERATIONS: [&str; 18] = [
-    "^", "/", "*", "%", "+", "-", "+=", "-=", "*=", "/=",
+pub const OPERATIONS: [&str; 20] = [
+    "^", "/", "*", "%", "+", "-",
+    "+=", "-=", "*=", "/=", "++", "--",
     "&&", "||",
     ">", "<", "<=", ">=", "==", "!="
 ];
@@ -57,7 +58,7 @@ pub fn get_operator_worth(string: &str) -> u8
 {
     match string
     {
-        "+"|"-"|"+="|"-=" => 0,
+        "+"|"-"|"+="|"-="|"++"|"--" => 0,
         "*"|"/"|"%"|"*/"|"/=" => 1,
         "^" => 2,
         "||" => 3,

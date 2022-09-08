@@ -372,5 +372,11 @@ pub fn get_expression_type(string: &str) -> Result<ExpressionType, String>
         return Ok(ExpressionType::Call);
     }
 
+    // check for additional ++ or --
+    if string.ends_with("++") || string.ends_with("--")
+    {
+        return Ok(ExpressionType::Assignment);
+    }
+
     Err("Unkown expression.".to_string())
 }
