@@ -1,10 +1,8 @@
-use std::collections::HashMap;
-
-use crate::{types::{Token, Runner}, parser::operation_parser, utility};
+use crate::{types::{Token, Runner, VarMap}, parser::operation_parser, utility};
 
 // recursive function that runs the operation from the reverse polish notation.
-pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
-    vars: &HashMap<String, Token>) -> Result<Option<Token>, String>
+pub fn run_operation(runner: &mut Runner, operations: Vec<Token>,
+    vars: &VarMap) -> Result<Option<Token>, String>
 {
     let mut stack: Vec<Token> = vec![];
 
@@ -80,8 +78,17 @@ pub fn run_operation(runner: &Runner, operations: &Vec<Token>,
     }
 }
 
-fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Token>, return_original: bool) -> Result<Option<Token>, String>
+fn handle_token_type(runner: &mut Runner, token: &Token, vars: &VarMap, return_original: bool) -> Result<Option<Token>, String>
 {
+    // Check for chain of vars first.
+    if let Token::Accessor(p, a) = token {
+    if let Token::Var(_) = **p { if let Token::Accessor(_, _) = **a {
+    if let Some(Ok(Some(result))) = check_var_chain(token)
+    {
+        return handle_token_type(runner, &result, vars, false);
+    }
+    }}}
+
     match token
     {
         Token::Call(name, args) =>
@@ -100,7 +107,7 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                             Ok(operation) =>
                             {
                                 if let Ok(Some(ran_token)) = 
-                                    run_operation(runner, operation, vars)
+                                    run_operation(runner, operation.clone(), vars)
                                 {
                                     parsed_args.push(ran_token);
                                 }
@@ -133,7 +140,7 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
         Token::Operation(op) =>
         {
             // Run operation recursively.
-            return run_operation(runner, op, vars);
+            return run_operation(runner, op.clone(), vars);
         },
         Token::Var(name) =>
         {
@@ -142,7 +149,7 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
 
             if vars.contains_key(name)
             {
-                var = vars[name].clone();
+                var = vars[name].0.clone();
             }
             else
             {
@@ -207,6 +214,18 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                         Err("Tried to access a string index out of range.".to_string())
                     }
                 },
+                (Err(error), Ok(Some(Token::Var(var2)))) =>
+                {
+                    if let Token::Var(var1) = &**prev_token
+                    {
+                        let var = Token::Var(format!("{}.{}", var1, var2));
+                        handle_token_type(runner, &var, vars, false)
+                    }
+                    else
+                    {
+                        Err(error)
+                    }
+                }
                 // Remainder functions that won't be handled properly until conversion.
                 (prev, current) =>
                 {
@@ -219,6 +238,18 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
                                 if let Ok(result) = handle_token_type(runner, &Token::Call(name.to_string(), format!("{},{}", actual_prev, args)), vars, return_original)
                                 {
                                     return Ok(result);
+                                }
+                            }
+                        }
+                        Token::Var(var2) =>
+                        {
+                            if let Token::Var(var1) = &**prev_token
+                            {
+                                let var = Token::Var(format!("{}.{}", var1, var2));
+                                let handling = handle_token_type(runner, &var, vars, false);
+                                if let Err(_) = handling
+                                {
+                                    return Ok(Some(var));
                                 }
                             }
                         }
@@ -235,6 +266,49 @@ fn handle_token_type(runner: &Runner, token: &Token, vars: &HashMap<String, Toke
             }
         }
         _ => Ok(if return_original { Some(token.clone()) } else { None })
+    }
+}
+
+fn check_var_chain(token: &Token) -> Option<Result<Option<Token>, String>>
+{
+    let mut var = String::new();
+    if let Ok(i) = check_var_chain_recursive(token, &mut var)
+    {
+        var = var[1..].to_string();
+        Some(Ok(Some(Token::Accessor(Box::new(Token::Var(var)), Box::new(Token::Int(i))))))
+    }
+    else { None }
+}
+
+fn check_var_chain_recursive(token: &Token, built_string: &mut String) -> Result<i32, ()>
+{
+    match token
+    {
+        Token::Accessor(prev, accessor) =>
+        {
+            if let Token::Var(var) = &**prev
+            {
+                built_string.push_str(format!(".{}", var).as_str());
+
+                if let Token::Accessor(_, _) = &**accessor
+                {
+                    check_var_chain_recursive(&accessor, built_string)
+                }
+                else if let Token::Int(i) = &**accessor
+                {
+                    Ok(*i)
+                }
+                else
+                {
+                    Err(())
+                }
+            }
+            else
+            {
+                Err(())
+            }
+        },
+        _ => Err(())
     }
 }
 

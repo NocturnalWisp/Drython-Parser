@@ -1,5 +1,4 @@
-use crate::types::{Runner, Token, ExpressionList};
-use std::collections::HashMap;
+use crate::types::{Runner, Token, ExpressionList, VarMap};
 
 use super::operation_runner::run_operation;
 use crate::parser::operation_parser::parse_operation;
@@ -8,7 +7,7 @@ impl Runner
 {
     // Resursive function to handle calling order in internal scopes.
     // Originally called by call_internal for a parsed function.
-    pub fn handle_scope(&self, function: &ExpressionList, vars: &mut HashMap<String, Token>, is_loop: bool) -> Result<Option<Token>, (String, usize)>
+    pub fn handle_scope(&mut self, function: &ExpressionList, vars: &mut VarMap, is_loop: bool) -> Result<Option<Token>, (String, usize)>
     {
         let mut return_result: Result<Option<Token>, (String, usize)> = Ok(None);
         
@@ -25,7 +24,7 @@ impl Runner
                 _ if function.single_op.contains_key(&i) =>
                 {
                     let expression = &function.single_op[&i];
-                    let operation = run_operation(self, &expression.1, &vars);
+                    let operation = run_operation(self, expression.1.clone(), &vars);
 
                     match expression.0.as_str()
                     {
@@ -60,27 +59,23 @@ impl Runner
                             {
                                 Ok(Some(result)) =>
                                 {
-                                    // Check if any of the parent hashmaps contains this var.
+                                    // Check if any of the parent hashmap contains this var.
                                     if vars.contains_key(string)
                                     {
                                         vars.entry(string.to_string()).and_modify(
                                             |x|
                                             {
-                                                *x = result.clone()
-                                            });
-
-                                        // Check for external references.
-                                        if self.var_refs.contains_key(string)
-                                        {
-                                            if let Some(function) = self.var_refs.get(string)
-                                            {
-                                                function.1(function.0.clone(), string.to_string(), result);
+                                                // Make sure not external or change has the same type.
+                                                if !x.1 || Token::variant_equal(&result, &x.0)
+                                                {
+                                                    *x = (result.clone(), x.1);
+                                                }
                                             }
-                                        }
+                                        );
                                     }
                                     else
                                     {
-                                        vars.insert(string.to_string(), result);
+                                        vars.insert(string.to_string(), (result, false));
                                         local_var_refs.push(string)
                                     }
                                 },
@@ -101,7 +96,7 @@ impl Runner
 
                     for tokens in expression.1.iter()
                     {
-                        match run_operation(self, &tokens, &vars)
+                        match run_operation(self, tokens.clone(), &vars)
                         {
                             Ok(Some(result)) =>
                             {
@@ -138,7 +133,7 @@ impl Runner
                                     {
                                         Ok(operation) =>
                                         {
-                                            match run_operation(self, &operation, &vars)
+                                            match run_operation(self, operation.clone(), &vars)
                                             {
                                                 Ok(Some(Token::Bool(true))) =>
                                                 {
@@ -171,7 +166,7 @@ impl Runner
                                         {
                                             Ok(operation) =>
                                             {
-                                                match run_operation(self, &operation, &vars)
+                                                match run_operation(self, operation.clone(), &vars)
                                                 {
                                                     Ok(Some(Token::Bool(true))) =>
                                                     {

@@ -1,5 +1,4 @@
-use std::{collections::HashMap, rc::Rc, cell::RefCell};
-
+use std::collections::HashMap;
 use super::script_type::ScriptType;
 
 pub mod error;
@@ -11,7 +10,7 @@ pub struct Parser
     pub global_expressions: ExpressionList
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ExpressionList
 {
     pub scope_info: (Option<String>, Option<String>),
@@ -71,7 +70,6 @@ pub type DynamicFunctionCall = Option<Box<dyn Fn(Vec<Token>) -> Result<Option<To
 pub type RegisteredFunction= (String, DynamicFunctionCall);
 pub type RegisteredVariable = (String, Token);
 
-
 #[derive(Debug)]
 pub struct Operation
 {
@@ -79,15 +77,13 @@ pub struct Operation
     pub b: Token,
 }
 
-pub trait VariableReference {}
-
-pub type VarRef = Box<dyn Fn(Rc<RefCell<dyn VariableReference>>, String, Token)>;
-
 pub struct Runner
 {
     pub parser: Parser,
     pub external_functions: HashMap<String, DynamicFunctionCall>,
-    pub vars: HashMap<String, Token>,
-    // A collection of variable references to external variables.
-    pub var_refs: HashMap<String, (Rc<RefCell<dyn VariableReference>>, VarRef)>,
+    // bool - is external var
+    // external vars cannot have their types changed.
+    pub vars: VarMap,
 }
+
+pub type VarMap = HashMap<String, (Token, bool)>;

@@ -1,5 +1,5 @@
 use crate::types::Token;
-use std::{convert::From, fmt::{self, Display}};
+use std::{convert::From, fmt::{self, Display}, any::Any};
 
 // Match arms for most functions.
 macro_rules! TI
@@ -26,6 +26,38 @@ macro_rules! TIS
 #[allow(unused_variables)]
 impl Token
 {
+    pub fn variant_equal(&self, other: &Token) -> bool
+    {
+        match (self, other)
+        {
+            (Token::Int(_), Token::Int(_)) => true,
+            (Token::Float(_), Token::Float(_)) => true,
+            (Token::String(_), Token::String(_)) => true,
+            (Token::Char(_), Token::Char(_)) => true,
+            (Token::Bool(_), Token::Bool(_)) => true,
+            (Token::Collection(c1), Token::Collection(c2)) =>
+            {
+                if c1.len() != c2.len() { return false; }
+
+                let mut all_equal = true;
+                for i1 in c1.iter()
+                {
+                    for i2 in c2.iter()
+                    {
+                        if !Token::variant_equal(i1, i2)
+                        {
+                            all_equal = false;
+                            break;
+                        }
+                    }
+                }
+
+                all_equal
+            }
+            _ => false
+        }
+    }
+
     pub fn add(&self, other: &Token) -> Option<Token>
     {
         match (self, other)
@@ -535,5 +567,21 @@ impl Display for Token
             },
             _ => "".to_string()
         })
+    }
+}
+
+impl From<Token> for Option<Box<dyn Any>>
+{
+    fn from(token: Token) -> Self
+    {
+        match token
+        {
+            Token::Int(i) => Some(Box::new(i)),
+            Token::String(s) => Some(Box::new(s)),
+            Token::Char(c) => Some(Box::new(c)),
+            Token::Float(f) => Some(Box::new(f)),
+            Token::Bool(b) => Some(Box::new(b)),
+            _ => None
+        }
     }
 }

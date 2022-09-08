@@ -1,9 +1,9 @@
 use crate::types::Runner;
 use crate::types::error::*;
 
-pub fn test_runner(runner: &mut Runner, error_manager: &mut ErrorManager)
+pub fn test_runner(runner: &mut Runner, _error_manager: &mut ErrorManager)
 {
-    runner.run_setup(error_manager);
+    // runner.run_setup(error_manager);
 
 
 
