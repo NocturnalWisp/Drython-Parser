@@ -64,6 +64,7 @@ macro_rules! CollectionApplyTogether
 #[allow(unused_variables)]
 impl Token
 {
+    // Only check the variant and not the value.
     pub fn variant_equal(&self, other: &Token) -> bool
     {
         match (self, other)
@@ -500,115 +501,53 @@ impl Token
     }
 }
 
+macro_rules! FromToToken
+{
+    ($t: ty, $token_type: tt) =>
+    {
+        impl From<$t> for Token
+        {
+            fn from(value: $t) -> Self
+            {
+                Token::$token_type(value)
+            }
+        }
+    };
+}
+
 // From other types
-impl From<i32> for Token
-{
-    fn from(value: i32) -> Self
-    {
-        Token::Int(value)
-    }
-}
+FromToToken!(i32, Int);
+FromToToken!(f32, Float);
+FromToToken!(String, String);
+FromToToken!(char, Char);
+FromToToken!(bool, Bool);
+FromToToken!(Vec<Token>, Collection);
 
-impl From<f32> for Token
+macro_rules! TokenToOther
 {
-    fn from(value: f32) -> Self
+    ($token_type: tt, $t: ty, $default: expr) =>
     {
-        Token::Float(value)
-    }
-}
-
-impl From<bool> for Token
-{
-    fn from(value: bool) -> Self
-    {
-        Token::Bool(value)
-    }
-}
-
-impl From<String> for Token
-{
-    fn from(value: String) -> Self
-    {
-        Token::String(value)
-    }
-}
-
-impl From<char> for Token
-{
-    fn from(value: char) -> Self
-    {
-        Token::Char(value)
-    }
-}
-
-impl From<Vec<Token>> for Token
-{
-    fn from(value: Vec<Token>) -> Self
-    {
-        Token::Collection(value)
-    }
+        impl From<Token> for $t
+        {
+            fn from(value: Token) -> Self
+            {
+                match value
+                {
+                    Token::$token_type(i) => i,
+                    _ => $default
+                }
+            }
+        }
+    };
 }
 
 // Into other types
-impl From<Token> for i32
-{
-    fn from(value: Token) -> Self
-    {
-        match value
-        {
-            Token::Int(i) => i,
-            _ => 0
-        }
-    }
-}
-
-impl From<Token> for f32
-{
-    fn from(value: Token) -> Self
-    {
-        match value
-        {
-            Token::Float(i) => i,
-            _ => 0.0
-        }
-    }
-}
-
-impl From<Token> for String
-{
-    fn from(value: Token) -> Self
-    {
-        match value
-        {
-            Token::String(i) => i,
-            _ => "".to_string()
-        }
-    }
-}
-
-impl From<Token> for char
-{
-    fn from(value: Token) -> Self
-    {
-        match value
-        {
-            Token::Char(c) => c,
-            _ => ' '
-        }
-    }
-}
-
-impl From<Token> for bool
-{
-    fn from(value: Token) -> Self
-    {
-        match value
-        {
-            Token::Bool(i) => i,
-            _ => false
-        }
-    }
-}
+TokenToOther!(Int, i32, 0);
+TokenToOther!(Float, f32, 0.0);
+TokenToOther!(String, String, String::new());
+TokenToOther!(Char, char, ' ');
+TokenToOther!(Bool, bool, false);
+TokenToOther!(Collection, Vec<Token>, vec![]);
 
 impl Display for Token
 {
@@ -636,21 +575,5 @@ impl Display for Token
             },
             _ => "".to_string()
         })
-    }
-}
-
-impl From<Token> for Option<Box<dyn Any>>
-{
-    fn from(token: Token) -> Self
-    {
-        match token
-        {
-            Token::Int(i) => Some(Box::new(i)),
-            Token::String(s) => Some(Box::new(s)),
-            Token::Char(c) => Some(Box::new(c)),
-            Token::Float(f) => Some(Box::new(f)),
-            Token::Bool(b) => Some(Box::new(b)),
-            _ => None
-        }
     }
 }
