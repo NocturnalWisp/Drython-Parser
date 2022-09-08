@@ -71,7 +71,7 @@ impl Runner
         }
 
         // Register all variables.
-        let operations = self.parser.global_expressions.single_op.iter().map(|x| { x.1.clone() }).collect::<Vec<(String, Vec<Token>, usize)>>();
+        let operations = self.parser.global_expressions.single_op.iter().map(|x| { x.clone() }).collect::<Vec<(String, Vec<Token>, usize)>>();
 
         for op in operations
         {
@@ -119,17 +119,16 @@ impl Runner
         }
         else
         {
-            let mut index: Option<usize> = None;
-            self.parser.global_expressions.internal_expressions.iter()
-                .for_each(|x| 
-                    if let Some(name) = &x.1.0.scope_info.0
+            let index = self.parser.global_expressions.internal_expressions.iter()
+                .position(|x| 
+                    if let Some(name) = &x.0.scope_info.0
                     {
                         if name == function_name
                         {
-                            index = Some(*x.0);
-                            return;
+                            true
                         }
-                    }
+                        else { false }
+                    } else { false }
                 );
 
             if let Some(index) = index
@@ -146,54 +145,50 @@ impl Runner
     // Called by a function pointer from a registered internal function.
     fn call_internal(&mut self, expression_index: &usize, arguments: Vec<Token>) -> Result<Option<Token>, (String, usize)>
     {
-        let mut return_result: Option<Token> = None;
+        let return_result: Option<Token>;
 
         let mut scope_vars: VarMap = HashMap::new();
 
         let mut arg_vars: VarMap = HashMap::new();
 
-        if let Some(function) =
-            self.parser.global_expressions.internal_expressions.iter().find(|x| x.0 == expression_index)
+        let function = self.parser.global_expressions.internal_expressions[*expression_index].0.clone();
+        if let Some(expected_args) = &function.scope_info.1
         {
-            let function = function.1.0.clone();
-            if let Some(expected_args) = &function.scope_info.1
+            match utility::split_by(expected_args.as_str(), ',')
             {
-                match utility::split_by(expected_args.as_str(), ',')
+                Ok(mut parsed_arg_names) =>
                 {
-                    Ok(mut parsed_arg_names) =>
+                    if parsed_arg_names.len() == arguments.len()
                     {
-                        if parsed_arg_names.len() == arguments.len()
+                        for i in 0..parsed_arg_names.len()
                         {
-                            for i in 0..parsed_arg_names.len()
-                            {
-                                arg_vars.insert(
-                                    parsed_arg_names.pop().unwrap_or("null".to_string()),
-                                    (arguments[i].clone(), false)
-                                );
-                            }
-                        }
-                        else
-                        {
-                            return Err((format!("Expected {} arguments, but only recieved {}.", parsed_arg_names.len(), arguments.len()), function.line_start));
+                            arg_vars.insert(
+                                parsed_arg_names.pop().unwrap_or("null".to_string()),
+                                (arguments[i].clone(), false)
+                            );
                         }
                     }
-                    Err(error) => {return Err((error, function.line_start));}
+                    else
+                    {
+                        return Err((format!("Expected {} arguments, but only recieved {}.", parsed_arg_names.len(), arguments.len()), function.line_start));
+                    }
                 }
+                Err(error) => {return Err((error, function.line_start));}
             }
-            scope_vars.extend(self.vars.clone());
-            scope_vars.extend(arg_vars);
-
-            match self.handle_scope(&function, &mut scope_vars, false)
-            {
-                Ok(result) =>
-                {
-                    return_result = result;
-                }
-                Err(error) => {return Err(error);}
-            }
-
-            self.vars = scope_vars.clone();
         }
+        scope_vars.extend(self.vars.clone());
+        scope_vars.extend(arg_vars);
+
+        match self.handle_scope(&function, &mut scope_vars, false)
+        {
+            Ok(result) =>
+            {
+                return_result = result;
+            }
+            Err(error) => {return Err(error);}
+        }
+
+        self.vars = scope_vars.clone();
 
         Ok(return_result)
     }

@@ -1,4 +1,4 @@
-use crate::types::{Runner, Token, ExpressionList, VarMap};
+use crate::types::{Runner, Token, ExpressionList, ExpressionListType, VarMap};
 
 use super::operation_runner::run_operation;
 use crate::parser::operation_parser::parse_operation;
@@ -16,15 +16,24 @@ impl Runner
         let mut previous_if_failed = false;
 
         // Follow through and run every expression.
-        for i in 0..function.size
+        
+        let mut single_index: usize = 0;
+        let mut multi_index: usize = 0;
+        let mut internal_index: usize = 0;
+
+        let mut i: usize = 0;
+
+        for expression_type in &function.expression_order
         {
-            match i
+            match expression_type
             {
                 // Return, Assignement, loop controls.
-                _ if function.single_op.contains_key(&i) =>
+                ExpressionListType::Single =>
                 {
-                    let expression = &function.single_op[&i];
+                    let expression = &function.single_op[single_index];
                     let operation = run_operation(self, expression.1.clone(), &vars);
+
+                    single_index += 1;
 
                     match expression.0.as_str()
                     {
@@ -89,10 +98,12 @@ impl Runner
                     }
                 },
                 // Function call.
-                _ if function.multi_ops.contains_key(&i) =>
+                ExpressionListType::Multi =>
                 {
-                    let expression = &function.multi_ops[&i];
+                    let expression = &function.multi_ops[multi_index];
                     let mut args: Vec<Token> = vec![];
+
+                    multi_index += 1;
 
                     for tokens in expression.1.iter()
                     {
@@ -117,9 +128,12 @@ impl Runner
                     }
                 },
                 // Internal scope.
-                _ if function.internal_expressions.contains_key(&i) =>
+                ExpressionListType::Internal =>
                 {
-                    let function = &function.internal_expressions[&i];
+                    let function = &function.internal_expressions[internal_index];
+
+                    internal_index += 1;
+
                     if let Some(scope_name) = &function.0.scope_info.0
                     {
                         match scope_name.as_str()
@@ -233,6 +247,8 @@ impl Runner
             {
                 break;
             }
+
+            i += 1;
         }
 
         for local_var in local_var_refs

@@ -6,7 +6,7 @@ mod call_parser;
 use std::collections::HashMap;
 
 use crate::utility;
-use crate::types::{Token, ExpressionList, error::*};
+use crate::types::{Token, ExpressionList, error::*, ExpressionListType};
 
 use super::variable_parser::parse_var;
 use super::{operation_parser, ExpressionType};
@@ -14,9 +14,12 @@ use scope_parser::parse_scope;
 
 pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_manager: &mut ErrorManager, in_expression: &ExpressionType, in_function: bool) -> ExpressionList
 {
-    let mut single_op: HashMap<usize, (String, Vec<Token>, usize)> = HashMap::new();
-    let mut multi_ops: HashMap<usize, (String, Vec<Vec<Token>>, usize)> = HashMap::new();
-    let mut internal_expressions: HashMap<usize, (ExpressionList, usize)> = HashMap::new();
+    let mut expression_order: Vec<ExpressionListType> = Vec::new();
+    let mut order_pushed_flag = false;
+
+    let mut single_op: Vec<(String, Vec<Token>, usize)> = Vec::new();
+    let mut multi_ops: Vec<(String, Vec<Vec<Token>>, usize)> = Vec::new();
+    let mut internal_expressions: Vec<(ExpressionList, usize)> = Vec::new();
     let mut includes: HashMap<String, usize> = HashMap::new(); 
 
     // For internal expressions lists.
@@ -86,7 +89,9 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                         Err(error) => {push_error!(error_manager, ParseError::new(line_start+scope_start, error.as_str()));}
                     }
 
-                    internal_expressions.insert(operation_index, (internal_expression, line_start+i));
+                    internal_expressions.push((internal_expression, line_start+i));
+                    expression_order.push(ExpressionListType::Internal);
+                    order_pushed_flag = true;
 
                     if expression_type == ExpressionType::Elif || expression_type == ExpressionType::Else
                     {
@@ -148,7 +153,9 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                     {
                         Ok(operation) =>
                         {
-                            single_op.insert(operation_index, ("return".to_string(), operation, line_start+i));
+                            single_op.push(("return".to_string(), operation, line_start+i));
+                            expression_order.push(ExpressionListType::Single);
+                            order_pushed_flag = true;
                             operation_index += 1;
                         }
                         Err(error) =>
@@ -173,7 +180,9 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                         {
                             Ok(operation) =>
                             {
-                                single_op.insert(operation_index, (result.0, operation, line_start+i));
+                                single_op.push((result.0, operation, line_start+i));
+                                expression_order.push(ExpressionListType::Single);
+                                order_pushed_flag = true;
                                 operation_index += 1;
                             }
                             Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
@@ -202,7 +211,9 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                                 }
                             }
 
-                            multi_ops.insert(operation_index, (result.0, operations, line_start+i));
+                            multi_ops.push((result.0, operations, line_start+i));
+                            expression_order.push(ExpressionListType::Multi);
+                            order_pushed_flag = true;
                             operation_index += 1;
                         },
                         Err(error) => {push_error!(error_manager, ParseError::new(line_start+i, error.as_str()));}
@@ -218,7 +229,10 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
             {
                 if let ExpressionType::Loop = scope_expression
                 {
-                    single_op.insert(operation_index, ("break".to_string(), vec![], line_start+i));
+                    single_op.push(("break".to_string(), vec![], line_start+i));
+                    expression_order.push(ExpressionListType::Single);
+                    order_pushed_flag = true;
+
                     operation_index += 1;
                 }
                 else
@@ -230,7 +244,10 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
             {
                 if let ExpressionType::Loop = scope_expression
                 {
-                    single_op.insert(operation_index, ("continue".to_string(), vec![], line_start+i));
+                    single_op.push(("continue".to_string(), vec![], line_start+i));
+                    expression_order.push(ExpressionListType::Single);
+                    order_pushed_flag = true;
+
                     operation_index += 1;
                 }
                 else
@@ -253,6 +270,8 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                     });
                     
                     includes.insert(library.to_string(), line_start+i);
+                    expression_order.push(ExpressionListType::Library);
+                    order_pushed_flag = true;
                 }
                 else
                 {
@@ -263,8 +282,11 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
             {
                 push_error!(error_manager, ParseError::new(line_start+i, "Too many 'end' statements are present. Are you missing a ':' after a function decleration?"));
             }
-
         }
+
+        // Handle expression order flagging for empty lines.
+        if order_pushed_flag { order_pushed_flag = false; }
+        else { expression_order.push(ExpressionListType::Null); }
     }
 
     ExpressionList
@@ -272,6 +294,8 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
         scope_info: (None, None),
         size: operation_index,
         line_start,
+
+        expression_order,
         single_op,
         multi_ops,
         internal_expressions,

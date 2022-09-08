@@ -23,6 +23,44 @@ macro_rules! TIS
     };
 }
 
+macro_rules! CollectionApply
+{
+    ($apply: ident, $name: ident) =>
+    {
+        fn $name(collection: &Vec<Token>, other_token: &Token) -> Token
+        {
+            Token::Collection(collection.iter().map(|x| x.$apply(other_token).unwrap_or(Token::Null)).collect())
+        }
+    };
+}
+
+
+macro_rules! CollectionApplyTogether
+{
+    ($apply: ident, $name: ident) =>
+    {
+        fn $name(collection: &Vec<Token>, other: &Vec<Token>) -> Token
+        {
+            if collection.len() == other.len()
+            {
+                let mut new_collection: Vec<Token> = Vec::new();
+
+                for i in 0..collection.len()
+                {
+                    if let Some(applied) = collection[i].$apply(&other[i])
+                    {
+                        new_collection.push(applied);
+                    }
+                }
+
+                return Token::Collection(new_collection);
+            }
+
+            Token::Null
+        }
+    };
+}
+
 #[allow(unused_variables)]
 impl Token
 {
@@ -93,14 +131,14 @@ impl Token
 
             TIS!(Collection, Bool, a, b) => Some(Token::collection_add(a, other)),
             TIS!(Bool, Collection, a, b) => Some(Token::collection_add(b, self)),
+
+            TIS!(Collection, a, b) => Some(Token::collection_add_together(a, b)),
             _ => None
         }
     }
 
-    fn collection_add(collection: &Vec<Token>, other_token: &Token) -> Token
-    {
-        Token::Collection(collection.iter().map(|x| x.add(other_token).unwrap_or(Token::Null)).collect())
-    }
+    CollectionApply!(add, collection_add);
+    CollectionApplyTogether!(add, collection_add_together);
     
     pub fn subtract(&self, other: &Token) -> Option<Token>
     {
@@ -124,14 +162,14 @@ impl Token
 
             TIS!(Collection, Float, a, b) => Some(Token::collection_subtract(a, other)),
             TIS!(Float, Collection, a, b) => Some(Token::collection_subtract(b, self)),
+
+            TIS!(Collection, a, b) => Some(Token::collection_subtract_together(a, b)),
             _ => None
         }
     }
 
-    fn collection_subtract(collection: &Vec<Token>, other_token: &Token) -> Token
-    {
-        Token::Collection(collection.iter().map(|x| x.subtract(other_token).unwrap_or(Token::Null)).collect())
-    }
+    CollectionApply!(subtract, collection_subtract);
+    CollectionApplyTogether!(subtract, collection_subtract_together);
     
     pub fn multiply(&self, other: &Token) -> Option<Token>
     {
@@ -150,15 +188,15 @@ impl Token
 
             TIS!(Collection, Float, a, b) => Some(Token::collection_multiply(a, other)),
             TIS!(Float, Collection, a, b) => Some(Token::collection_multiply(b, self)),
+
+            TIS!(Collection, a, b) => Some(Token::collection_multiply_together(a, b)),
             _ => None
         }
     }
 
-    fn collection_multiply(collection: &Vec<Token>, other_token: &Token) -> Token
-    {
-        Token::Collection(collection.iter().map(|x| x.multiply(other_token).unwrap_or(Token::Null)).collect())
-    }
-    
+    CollectionApply!(multiply, collection_multiply);
+    CollectionApplyTogether!(multiply, collection_multiply_together);
+
     pub fn divide(&self, other: &Token) -> Option<Token>
     {
         match (self, other)
@@ -181,15 +219,15 @@ impl Token
 
             TIS!(Collection, Float, a, b) => Some(Token::collection_divide(a, other)),
             TIS!(Float, Collection, a, b) => Some(Token::collection_divide(b, self)),
+
+            TIS!(Collection, a, b) => Some(Token::collection_divide_together(a, b)),
             _ => None
         }
     }
 
-    fn collection_divide(collection: &Vec<Token>, other_token: &Token) -> Token
-    {
-        Token::Collection(collection.iter().map(|x| x.divide(other_token).unwrap_or(Token::Null)).collect())
-    }
-    
+    CollectionApply!(divide, collection_divide);
+    CollectionApplyTogether!(divide, collection_divide_together);
+
     pub fn modulos(&self, other: &Token) -> Option<Token>
     {
         match (self, other)
@@ -212,15 +250,15 @@ impl Token
 
             TIS!(Collection, Float, a, b) => Some(Token::collection_modulos(a, other)),
             TIS!(Float, Collection, a, b) => Some(Token::collection_modulos(b, self)),
+
+            TIS!(Collection, a, b) => Some(Token::collection_modulos_together(a, b)),
             _ => None
         }
     }
 
-    fn collection_modulos(collection: &Vec<Token>, other_token: &Token) -> Token
-    {
-        Token::Collection(collection.iter().map(|x| x.modulos(other_token).unwrap_or(Token::Null)).collect())
-    }
-    
+    CollectionApply!(modulos, collection_modulos);
+    CollectionApplyTogether!(modulos, collection_modulos_together);
+
     pub fn and(&self, other: &Token) -> Option<Token>
     {
         match (self, other)
@@ -243,14 +281,14 @@ impl Token
 
             TIS!(Collection, Bool, a, b) => Some(Token::collection_and(a, other)),
             TIS!(Bool, Collection, a, b) => Some(Token::collection_and(b, self)),
+
+            TIS!(Collection, a, b) => Some(Token::collection_and_together(a, b)),
             _ => None
         }
     }
 
-    fn collection_and(collection: &Vec<Token>, other_token: &Token) -> Token
-    {
-        Token::Collection(collection.iter().map(|x| x.and(other_token).unwrap_or(Token::Null)).collect())
-    }
+    CollectionApply!(and, collection_and);
+    CollectionApplyTogether!(and, collection_and_together);
 
     pub fn or(&self, other: &Token) -> Option<Token>
     {
@@ -274,14 +312,14 @@ impl Token
 
             TIS!(Collection, Bool, a, b) => Some(Token::collection_or(a, other)),
             TIS!(Bool, Collection, a, b) => Some(Token::collection_or(b, self)),
+
+            TIS!(Collection, a, b) => Some(Token::collection_or_together(a, b)),
             _ => None
         }
     }
 
-    fn collection_or(collection: &Vec<Token>, other_token: &Token) -> Token
-    {
-        Token::Collection(collection.iter().map(|x| x.or(other_token).unwrap_or(Token::Null)).collect())
-    }
+    CollectionApply!(or, collection_or);
+    CollectionApplyTogether!(or, collection_or_together);
 
     pub fn check(&self) -> Option<Token>
     {
@@ -327,6 +365,8 @@ impl Token
             TIS!(Bool, Collection, a, b) => Some(Token::collection_eq(b, self)),
             TIS!(String, Collection, a, b) => Some(Token::collection_eq(b, self)),
             TIS!(Char, Collection, a, b) => Some(Token::collection_eq(b, self)),
+
+            TIS!(Collection, a, b) => Some(Token::collection_eq_together(a, b)),
             _ => None
         }
     }
@@ -338,6 +378,35 @@ impl Token
                                             {
                                                 true
                                             } else {false}))
+    }
+
+    fn collection_eq_together(collection: &Vec<Token>, other: &Vec<Token>) -> Token
+    {
+        if collection.len() == other.len()
+        {
+            let mut all_equal = true;
+
+            for i in 0..collection.len()
+            {
+                if let Some(Token::Bool(result)) = collection[i].compare_eq(&other[i])
+                {
+                    if !result
+                    {
+                        all_equal = false;
+                        break;
+                    }
+                }
+                else
+                {
+                    all_equal = false;
+                    break;
+                }
+            }
+
+            return Token::Bool(all_equal);
+        }
+
+        Token::Bool(false)
     }
 
     pub fn compare_neq(&self, other: &Token) -> Option<Token>

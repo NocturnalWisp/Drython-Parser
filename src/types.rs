@@ -11,16 +11,28 @@ pub struct Parser
 }
 
 #[derive(Clone, Debug)]
+pub enum ExpressionListType
+{
+    Null, // For empty lines to properly track line number.
+    Single,
+    Multi,
+    Internal,
+    Library,
+}
+
+#[derive(Clone, Debug)]
 pub struct ExpressionList
 {
     pub scope_info: (Option<String>, Option<String>),
     pub size: usize,
     pub line_start: usize,
+
+    pub expression_order: Vec<ExpressionListType>,
     // Return, assignment
-    pub single_op: HashMap<usize, (String, Vec<Token>, usize)>,
+    pub single_op: Vec<(String, Vec<Token>, usize)>,
     // Function call
-    pub multi_ops: HashMap<usize, (String, Vec<Vec<Token>>, usize)>,
-    pub internal_expressions: HashMap<usize, (ExpressionList, usize)>,
+    pub multi_ops: Vec<(String, Vec<Vec<Token>>, usize)>,
+    pub internal_expressions: Vec<(ExpressionList, usize)>,
     pub includes: HashMap<String, usize>,
 }
 
@@ -33,9 +45,11 @@ impl ExpressionList
             scope_info: (None, None),
             size: 0,
             line_start: 0,
-            single_op: HashMap::new(),
-            multi_ops: HashMap::new(),
-            internal_expressions: HashMap::new(),
+
+            expression_order: Vec::new(),
+            single_op: Vec::new(),
+            multi_ops: Vec::new(),
+            internal_expressions: Vec::new(),
             includes: HashMap::new(),
         }
     }
