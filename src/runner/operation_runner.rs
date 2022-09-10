@@ -1,7 +1,7 @@
 use crate::{types::{Token, Runner, VarMap}, parser::operation_parser, utility};
 
 // recursive function that runs the operation from the reverse polish notation.
-pub fn run_operation(runner: &mut Runner, operations: Vec<Token>,
+pub fn run_operation(runner: &mut Runner, operations: &Vec<Token>,
     vars: &VarMap) -> Result<Option<Token>, String>
 {
     let mut stack: Vec<Token> = vec![];
@@ -13,10 +13,10 @@ pub fn run_operation(runner: &mut Runner, operations: Vec<Token>,
             let second = stack.pop();
             let first = stack.pop();
 
-            if let (Some(unhandled1), Some(unhandled2)) = (&first, &second)
+            if let (Some(unhandled1), Some(unhandled2)) = (first, second)
             {
-                let handled_1 = handle_token_type(runner, unhandled1, vars, false);
-                let handled_2 = handle_token_type(runner, unhandled2, vars, false);
+                let handled_1 = handle_token_type(runner, unhandled1.clone(), vars, false);
+                let handled_2 = handle_token_type(runner, unhandled2.clone(), vars, false);
 
                 if let Err(error) = handled_1
                 {
@@ -29,12 +29,12 @@ pub fn run_operation(runner: &mut Runner, operations: Vec<Token>,
 
                 // Run operations based on whether the token has been handled or not.
                 // Unwrap because errors automatically return from this function before.
-                let ran_operation = match (handled_1.unwrap(), handled_2.unwrap())
+                let ran_operation = match (handled_1, handled_2)
                 {
-                    (Some(token1), Some(token2)) => run_operation_by_type(&token1, &token2, operator),
-                    (None, Some(token2)) => run_operation_by_type(unhandled1, &token2, operator),
-                    (Some(token1), None) => run_operation_by_type(&token1, unhandled2, operator),
-                    _ => run_operation_by_type(unhandled1, unhandled2, operator)
+                    (Ok(Some(token1)), Ok(Some(token2))) => run_operation_by_type(&token1, &token2, operator),
+                    (Ok(None), Ok(Some(token2))) => run_operation_by_type(&unhandled1, &token2, operator),
+                    (Ok(Some(token1)), Ok(None)) => run_operation_by_type(&token1, &unhandled2, operator),
+                    _ => run_operation_by_type(&unhandled1, &unhandled2, operator)
                 };
                 match ran_operation
                 {
@@ -56,7 +56,7 @@ pub fn run_operation(runner: &mut Runner, operations: Vec<Token>,
     if let Some(token) = stack.pop()
     {
         // Secondary handle in case it was a single token and not a full operation.
-        match handle_token_type(runner, &token, vars, false)
+        match handle_token_type(runner, token.clone(), vars, false)
         {
             Ok(Some(result)) =>
             {
@@ -78,41 +78,41 @@ pub fn run_operation(runner: &mut Runner, operations: Vec<Token>,
     }
 }
 
-fn handle_token_type(runner: &mut Runner, token: &Token, vars: &VarMap, return_original: bool) -> Result<Option<Token>, String>
+fn handle_token_type(runner: &mut Runner, token: Token, vars: &VarMap, return_original: bool) -> Result<Option<Token>, String>
 {
     // Check for chain of vars first.
-    if let Token::Accessor(p, a) = token {
+    if let Token::Accessor(p, a) = &token {
     if let Token::Var(_) = **p { if let Token::Accessor(_, _) = **a {
-    if let Some(Ok(Some(result))) = check_var_chain(token)
+    if let Some(Ok(Some(result))) = check_var_chain(&token)
     {
-        return handle_token_type(runner, &result, vars, false);
+        return handle_token_type(runner, result, vars, false);
     }
     }}}
 
-    match token
+    match &token
     {
         Token::Call(name, args) =>
         {
             // Parse arguments and run them recursively.
             let mut parsed_args: Vec<Token> = Vec::new();
 
-            match utility::split_by(args, ',')
+            match utility::split_by(&args, ',')
             {
                 Ok(result) =>
                 {
                     for arg in result
                     {
-                        match &operation_parser::parse_operation(&arg)
+                        match operation_parser::parse_operation(&arg)
                         {
                             Ok(operation) =>
                             {
                                 if let Ok(Some(ran_token)) = 
-                                    run_operation(runner, operation.clone(), vars)
+                                    run_operation(runner, &operation, vars)
                                 {
                                     parsed_args.push(ran_token);
                                 }
                             }
-                            Err(error) => {return Err(error.clone());}
+                            Err(error) => {return Err(error);}
                         }
                     }
                 }
@@ -122,9 +122,9 @@ fn handle_token_type(runner: &mut Runner, token: &Token, vars: &VarMap, return_o
                 }
             }
             
-            let call_result = runner.call(name, parsed_args, 0);
+            let call_result = runner.call(&name, parsed_args, 0);
             
-            match &call_result
+            match call_result
             {
                 Ok(None) =>
                 {
@@ -132,15 +132,15 @@ fn handle_token_type(runner: &mut Runner, token: &Token, vars: &VarMap, return_o
                 }
                 Ok(Some(result)) =>
                 {
-                    return Ok(Some(result.clone()));
+                    return Ok(Some(result));
                 }
-                Err(error) => {return Err(error.0.clone());}
+                Err(error) => {return Err(error.0);}
             }
         },
         Token::Operation(op) =>
         {
             // Run operation recursively.
-            return run_operation(runner, op.clone(), vars);
+            return run_operation(runner, &op, vars);
         },
         Token::Var(name) =>
         {
@@ -164,7 +164,7 @@ fn handle_token_type(runner: &mut Runner, token: &Token, vars: &VarMap, return_o
 
             for item in items
             {
-                if let Ok(Some(token_result)) = handle_token_type(runner, item, vars, false)
+                if let Ok(Some(token_result)) = handle_token_type(runner, item.clone(), vars, false)
                 {
                     new_items.push(token_result);
                 }
@@ -178,13 +178,13 @@ fn handle_token_type(runner: &mut Runner, token: &Token, vars: &VarMap, return_o
         },
         Token::Accessor(prev_token, accessor) =>
         {
-            match (handle_token_type(runner, prev_token, vars, false), handle_token_type(runner, accessor, vars, true))
+            match (handle_token_type(runner, *prev_token.clone(), vars, false), handle_token_type(runner, *accessor.clone(), vars, true))
             {
                 // Collection.Int -> index
                 (Ok(Some(Token::Collection(collection))), Ok(Some(Token::Int(i)))) =>
                 {
                     let token = &collection[i as usize];
-                    if let Ok(Some(result)) = handle_token_type(runner, token, vars, false)
+                    if let Ok(Some(result)) = handle_token_type(runner, token.clone(), vars, false)
                     {
                         Ok(Some(result))
                     }
@@ -196,12 +196,12 @@ fn handle_token_type(runner: &mut Runner, token: &Token, vars: &VarMap, return_o
                 // String.String -> variable name
                 (Ok(Some(Token::String(value))), Ok(Some(Token::String(accessor_str)))) =>
                 {
-                    handle_token_type(runner, &Token::Var(format!("{}.{}", value, accessor_str.clone())), vars, false)
+                    handle_token_type(runner, Token::Var(format!("{}.{}", value, accessor_str.clone())), vars, false)
                 },
                 // String.Call() -> call with longer name
                 (Ok(Some(Token::String(value))), Ok(Some(Token::Call(name, args)))) =>
                 {
-                    handle_token_type(runner, &Token::Call(format!("{}.{}", value, name), args), vars, false)
+                    handle_token_type(runner, Token::Call(format!("{}.{}", value, name), args), vars, false)
                 },
                 (Ok(Some(Token::String(value))), Ok(Some(Token::Int(i)))) =>
                 {
@@ -219,7 +219,7 @@ fn handle_token_type(runner: &mut Runner, token: &Token, vars: &VarMap, return_o
                     if let Token::Var(var1) = &**prev_token
                     {
                         let var = Token::Var(format!("{}.{}", var1, var2));
-                        handle_token_type(runner, &var, vars, false)
+                        handle_token_type(runner, var, vars, false)
                     }
                     else
                     {
@@ -235,7 +235,7 @@ fn handle_token_type(runner: &mut Runner, token: &Token, vars: &VarMap, return_o
                         {
                             if let Ok(Some(actual_prev)) = &prev
                             {
-                                if let Ok(result) = handle_token_type(runner, &Token::Call(name.to_string(), format!("{},{}", actual_prev, args)), vars, return_original)
+                                if let Ok(result) = handle_token_type(runner, Token::Call(name.to_string(), format!("{},{}", actual_prev, args)), vars, return_original)
                                 {
                                     return Ok(result);
                                 }
@@ -246,7 +246,7 @@ fn handle_token_type(runner: &mut Runner, token: &Token, vars: &VarMap, return_o
                             if let Token::Var(var1) = &**prev_token
                             {
                                 let var = Token::Var(format!("{}.{}", var1, var2));
-                                let handling = handle_token_type(runner, &var, vars, false);
+                                let handling = handle_token_type(runner, var.clone(), vars, false);
                                 if let Err(_) = handling
                                 {
                                     return Ok(Some(var));

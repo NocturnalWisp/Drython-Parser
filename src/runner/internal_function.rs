@@ -31,7 +31,7 @@ impl Runner
                 ExpressionListType::Single =>
                 {
                     let expression = &function.single_op[single_index];
-                    let operation = run_operation(self, expression.1.clone(), &vars);
+                    let operation = run_operation(self, &expression.1, &vars);
 
                     single_index += 1;
 
@@ -110,7 +110,7 @@ impl Runner
 
                     for tokens in expression.1.iter()
                     {
-                        match run_operation(self, tokens.clone(), &vars)
+                        match run_operation(self, tokens, &vars)
                         {
                             Ok(Some(result)) =>
                             {
@@ -153,7 +153,7 @@ impl Runner
                                     {
                                         Ok(operation) =>
                                         {
-                                            match run_operation(self, operation.clone(), &vars)
+                                            match run_operation(self, &operation, &vars)
                                             {
                                                 Ok(Some(Token::Bool(true))) =>
                                                 {
@@ -186,7 +186,7 @@ impl Runner
                                         {
                                             Ok(operation) =>
                                             {
-                                                match run_operation(self, operation.clone(), &vars)
+                                                match run_operation(self, &operation, &vars)
                                                 {
                                                     Ok(Some(Token::Bool(true))) =>
                                                     {

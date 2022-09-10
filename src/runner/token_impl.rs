@@ -105,6 +105,7 @@ impl Token
             TIS!(Float, a, b) => Some(Token::Float(*a as f32 + b)),
             TIS!(Bool, a, b) => Some(Token::Int(*a as i32 + *b as i32)),
             TIS!(Char, a, b) => Some(Token::String(format!("{}{}", a, b))),
+            TIS!(String, a, b) => Some(Token::String(format!("{}{}", a, b))),
 
             TI!(Int, Float, a, b) =>
                 Some(Token::Float(*a as f32 + b)),
@@ -116,6 +117,7 @@ impl Token
             TI!(String, Int, a, b) => Some(Token::String(format!("{}{}", a, b))),
             TI!(String, Float, a, b) => Some(Token::String(format!("{}{}", a, b))),
             TI!(String, Bool, a, b) => Some(Token::String(format!("{}{}", a, b))),
+            TI!(String, Char, a, b) => Some(Token::String(format!("{}{}", a, b))),
 
             TI!(Char, Int, a, b) => Some(Token::String(format!("{}{}", a, b))),
             TI!(Char, Float, a, b) => Some(Token::String(format!("{}{}", a, b))),

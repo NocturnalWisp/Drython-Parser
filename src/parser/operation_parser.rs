@@ -530,6 +530,7 @@ fn parse_token_value<'a>(value: &'a str, literal: bool, is_char: bool) -> Token
 // Followed: https://brilliant.org/wiki/shunting-yard-algorithm/
 fn handle_populating_operation(mut tokens: Vec<Token>) -> Vec<Token>
 {
+
     let mut map: HashMap<usize, Token> = HashMap::with_capacity(tokens.len());
 
     for index in 0..tokens.len()
@@ -540,26 +541,34 @@ fn handle_populating_operation(mut tokens: Vec<Token>) -> Vec<Token>
     let mut stack: Vec<usize> = Vec::with_capacity(tokens.len());
     let mut queue: VecDeque<usize> = VecDeque::with_capacity(tokens.len());
 
-    for (index, token) in map.iter()
+    for index in (0..map.len()).rev()
     {
-        if let Token::Operator(op) = token
+        println!("{:?}", map[&index]);
+        if let Token::Operator(op) = &map[&index]
         {
-            if stack.len() > 0
+            if let Some(i) = stack.last().copied()
             {
-                let popped = stack.pop().unwrap();
-                while operator_a_gte_b(&map[&popped], &op)
+                if let Token::Operator(mut stack_top) = map[&i].clone()
                 {
-                    if let Some(result) = stack.pop()
+                    while operator_a_gte_b(&stack_top, &op)
                     {
-                        queue.push_back(result);
+                        if let Some(result) = stack.pop()
+                        {
+                            queue.push_back(result);
+                        }
+                        if let Some(i) = stack.last().copied() {
+                        if let Token::Operator(stack_top2) = &map[&i]
+                        { stack_top = stack_top2.clone(); }
+                        else { break; }}
+                        else { break; }
                     }
                 }
             }
-            stack.push(*index);
+            stack.push(index);
         }
         else
         {
-            queue.push_back(*index);
+            queue.push_back(index);
         }
     }
 
@@ -585,14 +594,7 @@ fn handle_populating_operation(mut tokens: Vec<Token>) -> Vec<Token>
 // Check if operator worth is greater than or equal to another.
 // Equal to allows for processing left most operators first that share the same value as another.
 // (Eg. x*2/7: x*2 should go first, than divide that by 7.)
-pub fn operator_a_gte_b(a: &Token, b: &str) -> bool
+pub fn operator_a_gte_b(a: &str, b: &str) -> bool
 {
-    if let Token::Operator(str) = a
-    {
-        return utility::get_operator_worth(str) >= utility::get_operator_worth(b)
-    }
-    else
-    {
-        return false;
-    }
+    return utility::get_operator_worth(a) >= utility::get_operator_worth(b)
 }

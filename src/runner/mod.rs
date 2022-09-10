@@ -57,12 +57,12 @@ impl Runner
                 {
                     while let Some(function) = lib.0.pop()
                     {
-                        self.external_functions.insert(function.0.clone(), function.1);
+                        self.external_functions.insert(function.0, function.1);
                     }
 
                     while let Some(var) = lib.1.pop()
                     {
-                        self.vars.insert(var.0.clone(), (var.1.clone(), true));
+                        self.vars.insert(var.0, (var.1, true));
                     }
                 },
                 Err(error) =>
@@ -73,25 +73,23 @@ impl Runner
         }
 
         // Register all variables.
-        let operations = self.parser.global_expressions.single_op.iter().map(|x| { x.clone() }).collect::<Vec<(String, Vec<Token>, usize)>>();
-
-        for op in operations
-        {
-            let operation = run_operation(self, op.1, &HashMap::new());
-
-            match operation
+        self.parser.global_expressions.single_op.clone().iter().for_each(|x|
             {
-                Ok(Some(result)) =>
+                let operation = run_operation(self, &x.1, &HashMap::new());
+
+                match operation
                 {
-                    self.vars.insert(op.0.to_string(), (result, false));
+                    Ok(Some(result)) =>
+                    {
+                        self.vars.insert(x.0.to_string(), (result, false));
+                    }
+                    Err(error) =>
+                    {
+                        push_error!(error_manager, RuntimeError::new(x.2, None, error.as_str()));
+                    }
+                    _ => ()
                 }
-                Err(error) =>
-                {
-                    push_error!(error_manager, RuntimeError::new(op.2, None, error.as_str()));
-                }
-                _ => ()
-            }
-        }
+            });
 
         self
     }
@@ -136,7 +134,7 @@ impl Runner
 
             if let Some(index) = index
             {
-                self.call_internal(&index, args.clone())
+                self.call_internal(&index, args)
             }
             else
             {
@@ -159,17 +157,13 @@ impl Runner
         {
             match utility::split_by(expected_args.as_str(), ',')
             {
-                Ok(mut parsed_arg_names) =>
+                Ok(parsed_arg_names) =>
                 {
                     if parsed_arg_names.len() == arguments.len()
                     {
-                        for i in 0..parsed_arg_names.len()
-                        {
-                            arg_vars.insert(
-                                parsed_arg_names.pop().unwrap_or("null".to_string()),
-                                (arguments[i].clone(), false)
-                            );
-                        }
+                        arg_vars.extend(parsed_arg_names.iter().enumerate()
+                            .map(|(i, x)| (x.clone(), (arguments[i].clone(), false))).collect::<HashMap<String, (Token, bool)>>()
+                        );
                     }
                     else
                     {
