@@ -42,7 +42,7 @@ impl Runner
                             match operation
                             {
                                 Ok(result) => { return_result = Ok(result); }
-                                Err(error) => { return Err((error, function.line_start+i)); }
+                                Err(error) => { return Err((error, function.line_start+i+1)); }
                             }
                         },
                         "break" =>
@@ -94,7 +94,7 @@ impl Runner
                                 Ok(None) => (),
                                 Err(error) =>
                                 {
-                                    return Err((error, function.line_start+i));
+                                    return Err((error, function.line_start+i+1));
                                 }
                             }
                         }
@@ -119,15 +119,18 @@ impl Runner
                             Ok(None) => (),
                             Err(error) =>
                             {
-                                return Err((error, function.line_start+i));
+                                return Err((error, function.line_start+i+1));
                             }
                         }
                     }
 
-                    match self.call(&expression.0, args)
+                    match self.call(&expression.0, args, function.line_start+i+1)
                     {
                         Ok(_) => (),
-                        Err(error) => {return Err(error);}
+                        Err(error) =>
+                        {
+                            return Err(error);
+                        }
                     }
                 },
                 // Internal scope.

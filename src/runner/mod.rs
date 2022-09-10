@@ -7,7 +7,7 @@ mod internal_function;
 use crate::types::ExFnRef;
 use std::collections::HashMap;
 
-use crate::{types::{Runner, Token, RegisteredFunction, RegisteredVariable, VarMap, BoxedCall}, utility, external::{self}};
+use crate::{types::{Runner, Token, RegisteredFunction, RegisteredVariable, VarMap, BoxedCall}, utility, external};
 use crate::external::auto;
 use crate::types::Parser;
 use crate::types::error::*;
@@ -98,14 +98,14 @@ impl Runner
 
     pub fn  call_function(&mut self, function_name: &str, args: Vec<Token>, error_manager: &mut ErrorManager) -> Option<Token>
     {
-        match self.call(function_name, args)
+        match self.call(function_name, args, 0)
         {
             Ok(result) => {return result;}
             Err((error, line_number)) => {push_error!(error_manager, RuntimeError::new(line_number, Some(function_name.to_string()), error.as_str())); return None;}
         }
     }
 
-    fn call(&mut self, function_name: &str, args: Vec<Token>) -> Result<Option<Token>, (String, usize)>
+    fn call(&mut self, function_name: &str, args: Vec<Token>, line_number: usize) -> Result<Option<Token>, (String, usize)>
     {
         if self.external_functions.contains_key(function_name)
         {
@@ -140,7 +140,7 @@ impl Runner
             }
             else
             {
-                Err((format!("No function called '{}' exists.", function_name), 0))
+                Err((format!("No function called '{}' exists.", function_name), line_number))
             }
         }
     }
@@ -228,7 +228,7 @@ impl Runner
 
     pub fn register_variables(&mut self, map: HashMap<String, Token>) -> &mut Self
     {
-        self.vars.extend(map.into_iter().map(|x| (x.0, (x.1, false))));
+        self.vars.extend(map.into_iter().map(|x| (x.0, (x.1, true))));
 
         self
     }

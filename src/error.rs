@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, fmt::{Display, Debug}};
 
 pub type RuntimeErrorArguments<'a> = (usize, Option<String>, &'a mut ErrorManager);
 
@@ -42,11 +42,16 @@ macro_rules! push_error
 pub (crate) use push_error;
 
 // For parser
-pub trait DrythonError
+pub trait DrythonError: Display
 {
-    fn display(&self) -> String
+
+}
+
+impl Debug for dyn DrythonError
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result
     {
-        "".to_string()
+        self.fmt(f)
     }
 }
 
@@ -67,11 +72,13 @@ impl ParseError
         }
     }
 }
-impl DrythonError for ParseError
+impl DrythonError for ParseError {}
+
+impl Display for ParseError
 {
-    fn display(&self) -> String
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result
     {
-        format!("Drython Parse Error: Line [{}] - {}", self.location, self.message)
+        write!(f, "Drython Parse Error: Line [{}] - {}", self.location, self.message)
     }
 }
 
@@ -101,11 +108,13 @@ impl ScriptTypeError
         }
     }
 }
-impl DrythonError for ScriptTypeError
+impl DrythonError for ScriptTypeError {}
+
+impl Display for ScriptTypeError
 {
-    fn display(&self) -> String
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result
     {
-        format!("Drython Unkown Script Type: {}. Please use a know script type such as \"Component\".", self.first_line)
+        write!(f, "Drython Unkown Script Type: {}. Please use a know script type such as \"Component\".", self.first_line)
     }
 }
 
@@ -129,9 +138,11 @@ impl RuntimeError
         }
     }
 }
-impl DrythonError for RuntimeError
+impl DrythonError for RuntimeError {}
+
+impl Display for RuntimeError
 {
-    fn display(&self) -> String
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result
     {
         let mut in_function = false;
         if let Some(_) = self.function_name
@@ -139,7 +150,7 @@ impl DrythonError for RuntimeError
             in_function = true;
         }
 
-        format!("Drython Runtime Error: {}Line [{}] - {}",
+        write!(f, "Drython Runtime Error: {}Line [{}] - {}",
             if in_function { format!("Function ['{}'] ", self.function_name.clone().unwrap()) } else {"".to_string()},
             self.line_number,
             self.message

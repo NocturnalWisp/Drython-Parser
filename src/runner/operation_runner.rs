@@ -122,7 +122,7 @@ fn handle_token_type(runner: &mut Runner, token: &Token, vars: &VarMap, return_o
                 }
             }
             
-            let call_result = runner.call(name, parsed_args);
+            let call_result = runner.call(name, parsed_args, 0);
             
             match &call_result
             {
