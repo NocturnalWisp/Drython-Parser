@@ -175,36 +175,36 @@ pub fn attach<T, U, R>(function_call: FunctionCall<T, U, R>) -> DynamicFunctionC
     {
         FunctionCall::A0(call) =>
         {
-            return Some(Box::new(move |_args| { call(); Ok(None) }));
+            return (None, Some(Box::new(move |_, _| { call(); Ok(None) })));
         },
         FunctionCall::A0R(call) =>
         {
-            return Some(Box::new(move |_args|
+            return (None, Some(Box::new(move |_, _|
                     {
                         Ok(Some(Token::from(call())))
-                    }));
+                    })));
         },
         FunctionCall::A1(call) =>
         {
-            return Some(Box::new(move |args| { call(T::from(args[0].clone())); Ok(None) }));
+            return (None, Some(Box::new(move |_, args| { call(T::from(args[0].clone())); Ok(None) })));
         },
         FunctionCall::A1R(call) =>
         {
-            return Some(Box::new(move |args|
+            return (None, Some(Box::new(move |_, args|
                     {
                         Ok(Some(Token::from(call(T::from(args[0].clone())))))
-                    }));
+                    })));
         },
         FunctionCall::A2(call) =>
         {
-            return Some(Box::new(move |args| { call(T::from(args[0].clone()), U::from(args[1].clone())); Ok(None) }));
+            return (None, Some(Box::new(move |_, args| { call(T::from(args[0].clone()), U::from(args[1].clone())); Ok(None) })));
         },
         FunctionCall::A2R(call) =>
         {
-            return Some(Box::new(move |args|
+            return (None, Some(Box::new(move |_, args|
                     {
                         Ok(Some(Token::from(call(T::from(args[0].clone()), U::from(args[1].clone())))))
-                    }));
+                    })));
         },
     }
 }
@@ -248,7 +248,7 @@ macro_rules! register_custom_function
 {
     ($functions: expr, $name:expr, $call:expr) =>
     {
-        $functions.push(($name.to_string(), Some(Box::new($call))));
+        $functions.push(($name.to_string(), (None, Some(Box::new($call)))));
     }
 }
 

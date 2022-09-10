@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+
 use super::script_type::ScriptType;
 
 pub mod error;
@@ -80,7 +81,15 @@ pub enum Token
     Break
 }
 
-pub type DynamicFunctionCall = Option<Box<dyn Fn(Vec<Token>) -> Result<Option<Token>, String>>>;
+pub trait ExFnRef
+{
+    fn as_any(&self) -> &dyn std::any::Any;
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
+}
+
+pub type BoxedCall = Box<dyn Fn(Option<*mut dyn ExFnRef>, Vec<Token>) -> Result<Option<Token>, String>>;
+pub type DynamicFunctionCall = (Option<*mut dyn ExFnRef>,
+                                Option<BoxedCall>);
 pub type RegisteredFunction= (String, DynamicFunctionCall);
 pub type RegisteredVariable = (String, Token);
 
@@ -98,6 +107,7 @@ pub struct Runner
     // bool - is external var
     // external vars cannot have their types changed.
     pub vars: VarMap,
+    pub var_indexes_changed: Vec<String>,
 }
 
 pub type VarMap = HashMap<String, (Token, bool)>;

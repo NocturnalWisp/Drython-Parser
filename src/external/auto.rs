@@ -1,4 +1,4 @@
-use crate::types::Token;
+use crate::types::{Token, ExFnRef};
 use super::{expect, RegisteredFunction, RegisteredVariable, register_custom_function};
 
 pub fn register_functs(functions: &mut Vec<RegisteredFunction>)
@@ -11,7 +11,7 @@ pub fn register_vars(_variables: &mut Vec<RegisteredVariable>)
 
 }
 
-fn print(args: Vec<Token>) -> Result<Option<Token>, String>
+fn print(_: Option<*mut dyn ExFnRef>, args: Vec<Token>) -> Result<Option<Token>, String>
 {
     match expect(&args, &[None])
     {

@@ -6,6 +6,7 @@ pub fn parse_var(line: &str) -> Result<(String, String), String>
 
     if split.len() !=2
     {
+        // Handle ++ and --
         if line.ends_with("++")
         {
             let temp = line.trim_end_matches("++");

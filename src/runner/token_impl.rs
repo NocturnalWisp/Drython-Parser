@@ -1,5 +1,5 @@
 use crate::types::Token;
-use std::{convert::From, fmt::{self, Display}, any::Any};
+use std::{convert::From, fmt::{self, Display}};
 
 // Match arms for most functions.
 macro_rules! TI

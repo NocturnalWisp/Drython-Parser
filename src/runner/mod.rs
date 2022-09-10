@@ -4,9 +4,10 @@ mod token_impl;
 
 mod internal_function;
 
+use crate::types::ExFnRef;
 use std::collections::HashMap;
 
-use crate::{types::{Runner, Token, RegisteredFunction, RegisteredVariable, VarMap}, utility, external};
+use crate::{types::{Runner, Token, RegisteredFunction, RegisteredVariable, VarMap, BoxedCall}, utility, external::{self}};
 use crate::external::auto;
 use crate::types::Parser;
 use crate::types::error::*;
@@ -22,6 +23,7 @@ impl Runner
             parser,
             external_functions: HashMap::new(),
             vars: HashMap::new(),
+            var_indexes_changed: Vec::new(),
         }
     }
     
@@ -107,9 +109,10 @@ impl Runner
     {
         if self.external_functions.contains_key(function_name)
         {
-            if let Some(call) = &self.external_functions[function_name]
+            let function = &self.external_functions[function_name];
+            if let Some(call) = &function.1
             {
-                match call(args)
+                match call(self.external_functions[function_name].0, args)
                 {
                     Ok(result) => Ok(result),
                     Err(error) => Err((error, 0))
@@ -193,9 +196,10 @@ impl Runner
         Ok(return_result)
     }
     
-    pub fn regiser_external_function(&mut self, function_name: &str, function: fn(Vec<Token>) -> Result<Option<Token>, String>) -> &mut Self
+    pub fn register_external_function(&mut self, function_name: &str,
+        optional_identifier: Option<*mut dyn ExFnRef>, function: BoxedCall) -> &mut Self
     {
-        self.external_functions.insert(function_name.to_string(), Some(Box::new(function)));
+        self.external_functions.insert(function_name.to_string(), (optional_identifier, Some(Box::new(function))));
 
         self
     }
@@ -224,7 +228,7 @@ impl Runner
 
     pub fn register_variables(&mut self, map: HashMap<String, Token>) -> &mut Self
     {
-        self.vars.extend(map.into_iter().map(|x| (x.0, (x.1, true))));
+        self.vars.extend(map.into_iter().map(|x| (x.0, (x.1, false))));
 
         self
     }
@@ -232,7 +236,7 @@ impl Runner
     pub fn update_variable<T>(&mut self, external_var: (&str, &mut T)) -> &mut Self
         where T: From<Token>
     {
-        if self.vars.contains_key(external_var.0)
+        if self.var_indexes_changed.iter().any(|x| x == external_var.0)
         {
             let internal_var: T = From::from(self.vars[external_var.0].0.clone());
             *external_var.1 = internal_var;
@@ -243,7 +247,7 @@ impl Runner
 
     pub fn update_variable_conversion<T>(&mut self, external_var: (&str, &mut T), conversion_function: fn(Token) -> T) -> &mut Self
     {
-        if self.vars.contains_key(external_var.0)
+        if self.var_indexes_changed.iter().any(|x| x == external_var.0)
         {
             let internal_var: T = conversion_function(self.vars[external_var.0].0.clone());
             *external_var.1 = internal_var;

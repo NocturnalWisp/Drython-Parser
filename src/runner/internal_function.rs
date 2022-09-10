@@ -79,6 +79,9 @@ impl Runner
                                                 {
                                                     *x = (result.clone(), x.1);
                                                 }
+
+                                                // Add an indicator if an external var has changed.
+                                                if x.1 { self.var_indexes_changed.push(string.to_string()); }
                                             }
                                         );
                                     }
