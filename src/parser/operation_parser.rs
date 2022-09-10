@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{VecDeque, HashMap};
 
 use crate::types::Token;
 use crate::utility;
@@ -221,12 +221,14 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
 
                                     match operation
                                     {
-                                        Ok(op) =>
+                                        Ok(mut op) =>
                                         {
                                             match op.len()
                                             {
                                                 0 => collection_operations.push(Token::Null),
-                                                1 => collection_operations.push(op[0].clone()),
+                                                // Pop and Unwrap allowed because of our knowledge of a
+                                                // single element present.
+                                                1 => collection_operations.push(op.pop().unwrap()),
                                                 _ => collection_operations.push(Token::Operation(op))
                                             }
                                         },
@@ -325,13 +327,13 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
                             match &current_accessor_token
                             {
                                 Token::Null => (),
-                                _ => { token = handle_accessor(&current_accessor_token, Box::new(token)); }
+                                _ => { token = handle_accessor(current_accessor_token.clone(), Box::new(token)); }
                             }
 
                             // Check if using an accessor after this call.
                             if string.len() >= i+2 && &string[i+1..i+2] == "."
                             {
-                                current_accessor_token = token.clone();
+                                current_accessor_token = token;
                                 
                                 last_token_type = ParseTokenType::None;
                                 token_start = i+2;
@@ -363,7 +365,7 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
                     was_last = true;
                 }
 
-                let token = handle_accessor(&current_accessor_token, Box::new(parse_token_value(&string[token_start..token_end], is_literal, is_char)));
+                let token = handle_accessor(current_accessor_token.clone(), Box::new(parse_token_value(&string[token_start..token_end], is_literal, is_char)));
 
                 if current_char_type == ParseTokenType::Accessor
                 {
@@ -413,7 +415,7 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
                     if let Token::Null = current_accessor_token {}
                     else
                     {
-                        token = handle_accessor(&current_accessor_token, Box::new(token));
+                        token = handle_accessor(current_accessor_token.clone(), Box::new(token));
                     }
                     tokens_ptr.push(token);
                 }
@@ -478,15 +480,15 @@ pub fn parse_operation<'a>(string: & str) -> Result<Vec<Token>, String>
     
 }
 
-fn handle_accessor(prev_token: &Token, new_token: Box<Token>) -> Token
+fn handle_accessor(prev_token: Token, new_token: Box<Token>) -> Token
 {
-    if let Token::Accessor(prev, accessor) = &*prev_token
+    if let Token::Accessor(prev, accessor) = prev_token
     {
-        Token::Accessor(prev.clone(), Box::new(handle_accessor(&*accessor, new_token)))
+        Token::Accessor(prev, Box::new(handle_accessor(*accessor, new_token)))
     }
     else
     {
-        Token::Accessor(Box::new(prev_token.clone()), new_token)
+        Token::Accessor(Box::new(prev_token), new_token)
     }
 }
 
@@ -526,29 +528,38 @@ fn parse_token_value<'a>(value: &'a str, literal: bool, is_char: bool) -> Token
 // Uses the shunting algorithm based on the reverse polish technique.
 // (Doesn't deal with brackets because Operations all ready nest themselves.)
 // Followed: https://brilliant.org/wiki/shunting-yard-algorithm/
-fn handle_populating_operation(tokens: Vec<Token>) -> Vec<Token>
+fn handle_populating_operation(mut tokens: Vec<Token>) -> Vec<Token>
 {
-    let mut stack: Vec<&Token> = Vec::new();
-    let mut queue: VecDeque<&Token> = VecDeque::new();
+    let mut map: HashMap<usize, Token> = HashMap::with_capacity(tokens.len());
 
-    let mut final_tokens: Vec<Token> = Vec::new();
+    for index in 0..tokens.len()
+    {
+        map.insert(index, tokens.pop().unwrap());
+    }
 
-    for token in tokens.iter()
+    let mut stack: Vec<usize> = Vec::with_capacity(tokens.len());
+    let mut queue: VecDeque<usize> = VecDeque::with_capacity(tokens.len());
+
+    for (index, token) in map.iter()
     {
         if let Token::Operator(op) = token
         {
-            while operator_a_gte_b(stack.last(), &op)
+            if stack.len() > 0
             {
-                if let Some(result) = stack.pop()
+                let popped = stack.pop().unwrap();
+                while operator_a_gte_b(&map[&popped], &op)
                 {
-                    queue.push_back(result);
+                    if let Some(result) = stack.pop()
+                    {
+                        queue.push_back(result);
+                    }
                 }
             }
-            stack.push(token);
+            stack.push(*index);
         }
         else
         {
-            queue.push_back(token);
+            queue.push_back(*index);
         }
     }
 
@@ -560,34 +571,25 @@ fn handle_populating_operation(tokens: Vec<Token>) -> Vec<Token>
             queue.push_back(result);
         }
     }
-    
+
     // Finalize and move everything to the final tokens vector.
-    while !queue.is_empty()
+    // Without cloning, does allocate map.
+    for token_index in queue.iter().rev()
     {
-        if let Some(result) = queue.pop_back()
-        {
-            final_tokens.push(result.clone());
-        }
+        tokens.push(map.remove(&token_index).unwrap());
     }
     
-    final_tokens
+    tokens
 }
 
 // Check if operator worth is greater than or equal to another.
 // Equal to allows for processing left most operators first that share the same value as another.
 // (Eg. x*2/7: x*2 should go first, than divide that by 7.)
-pub fn operator_a_gte_b(a: Option<&&Token>, b: &str) -> bool
+pub fn operator_a_gte_b(a: &Token, b: &str) -> bool
 {
-    if let Some(token) = a
+    if let Token::Operator(str) = a
     {
-        if let Token::Operator(str) = token
-        {
-            return utility::get_operator_worth(str) >= utility::get_operator_worth(b)
-        }
-        else
-        {
-            return false;
-        }
+        return utility::get_operator_worth(str) >= utility::get_operator_worth(b)
     }
     else
     {
