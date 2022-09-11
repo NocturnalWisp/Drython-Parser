@@ -246,8 +246,7 @@ fn handle_token_type(runner: &mut Runner, token: Token, vars: &VarMap, return_or
                             if let Token::Var(var1) = &**prev_token
                             {
                                 let var = Token::Var(format!("{}.{}", var1, var2));
-                                let handling = handle_token_type(runner, var.clone(), vars, false);
-                                if let Err(_) = handling
+                                if let Err(_) = handle_token_type(runner, var.clone(), vars, false)
                                 {
                                     return Ok(Some(var));
                                 }
@@ -265,7 +264,7 @@ fn handle_token_type(runner: &mut Runner, token: Token, vars: &VarMap, return_or
                 },
             }
         }
-        _ => Ok(if return_original { Some(token.clone()) } else { None })
+        _ => Ok(if return_original { Some(token) } else { None })
     }
 }
 

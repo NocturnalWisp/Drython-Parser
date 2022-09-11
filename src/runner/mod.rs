@@ -144,7 +144,7 @@ impl Runner
     }
 
     // Called by a function pointer from a registered internal function.
-    fn call_internal(&mut self, expression_index: &usize, arguments: Vec<Token>) -> Result<Option<Token>, (String, usize)>
+    fn call_internal(&mut self, expression_index: &usize, mut arguments: Vec<Token>) -> Result<Option<Token>, (String, usize)>
     {
         let return_result: Option<Token>;
 
@@ -161,8 +161,9 @@ impl Runner
                 {
                     if parsed_arg_names.len() == arguments.len()
                     {
-                        arg_vars.extend(parsed_arg_names.iter().enumerate()
-                            .map(|(i, x)| (x.clone(), (arguments[i].clone(), false))).collect::<HashMap<String, (Token, bool)>>()
+                        arguments.reverse();
+                        arg_vars.extend(parsed_arg_names.into_iter()
+                            .map(|x| (x, (arguments.pop().unwrap(), false)))
                         );
                     }
                     else
@@ -185,7 +186,7 @@ impl Runner
             Err(error) => {return Err(error);}
         }
 
-        self.vars = scope_vars.clone();
+        self.vars = scope_vars;
 
         Ok(return_result)
     }
@@ -227,24 +228,22 @@ impl Runner
         self
     }
     
-    pub fn update_variable<T>(&mut self, external_var: (&str, &mut T)) -> &mut Self
+    pub fn update_variable<T>(&mut self, external_var: (&str, &mut T)) -> & mut Self
         where T: From<Token>
     {
         if self.var_indexes_changed.iter().any(|x| x == external_var.0)
         {
-            let internal_var: T = From::from(self.vars[external_var.0].0.clone());
-            *external_var.1 = internal_var;
+            *external_var.1 = From::from(self.vars[external_var.0].0.clone());
         }
 
         self
     }
 
-    pub fn update_variable_conversion<T>(&mut self, external_var: (&str, &mut T), conversion_function: fn(Token) -> T) -> &mut Self
+    pub fn update_variable_conversion<T>(&mut self, external_var: (&str, &mut T), conversion_function: fn(&Token) -> T) -> &mut Self
     {
         if self.var_indexes_changed.iter().any(|x| x == external_var.0)
         {
-            let internal_var: T = conversion_function(self.vars[external_var.0].0.clone());
-            *external_var.1 = internal_var;
+            *external_var.1 = conversion_function(&self.vars[external_var.0].0);
         }
 
         self
