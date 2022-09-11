@@ -1,8 +1,18 @@
-pub fn parse_var(line: &str) -> Result<(String, String), String>
+pub fn parse_var(line: &str) -> Result<(Vec<String>, String, String), String>
 {
-    let mut var: (String, String) = ("".to_string(), "".to_string());
-    
-    let split: Vec<&str> = line.split("=").collect();
+    let mut var: (Vec<String>, String, String) = (vec![], "".to_string(), "".to_string());
+
+    let mut identifier_split: Vec<String> = line.split("?").map(|x| x.to_string()).collect();
+
+    if identifier_split.len() == 0
+    {
+        return Err("Failed to parse variable assignement. Expected a single '='.".to_string());
+    }
+
+    let var_unsplit = identifier_split.pop().unwrap();
+    let split: Vec<&str> = var_unsplit.split("=").collect();
+
+    var.0 = identifier_split;
 
     if split.len() !=2
     {
@@ -10,12 +20,14 @@ pub fn parse_var(line: &str) -> Result<(String, String), String>
         if line.ends_with("++")
         {
             let temp = line.trim_end_matches("++");
-            var = (temp.to_string(), format!("{}+{}", temp, 1));
+            var.1 = temp.to_string();
+            var.2 = format!("{}+{}", temp, 1);
         }
         else if line.ends_with("--")
         {
             let temp = line.trim_end_matches("--");
-            var = (temp.to_string(), format!("{}-{}", temp, 1));
+            var.1 = temp.to_string();
+            var.2 = format!("{}-{}", temp, 1);
         }
         else
         {
@@ -24,20 +36,20 @@ pub fn parse_var(line: &str) -> Result<(String, String), String>
     }
     else
     {
-        var.0 = split[0].to_string();
-        var.1 = split[1].to_string();
+        var.1 = split[0].to_string();
+        var.2 = split[1].to_string();
 
         // Check for assignment operatives.
         let mut operator: Option<char> = None;
-        if var.0.ends_with('+') { operator = Some('+'); }
-        else if var.0.ends_with('-') { operator = Some('-'); }
-        else if var.0.ends_with('*') { operator = Some('*'); }
-        else if var.0.ends_with('/') { operator = Some('/'); }
+        if var.1.ends_with('+') { operator = Some('+'); }
+        else if var.1.ends_with('-') { operator = Some('-'); }
+        else if var.1.ends_with('*') { operator = Some('*'); }
+        else if var.1.ends_with('/') { operator = Some('/'); }
 
         if let Some(operator) = operator
         {
-            var.0 = var.0.trim_end_matches(operator).to_string();
-            var.1 = format!("{}{}{}", var.0, operator, var.1);
+            var.1 = var.1.trim_end_matches(operator).to_string();
+            var.2 = format!("{}{}{}", var.1, operator, var.2);
         }
     }
 

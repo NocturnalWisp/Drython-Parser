@@ -145,18 +145,15 @@ fn handle_token_type(runner: &mut Runner, token: Token, vars: &VarMap, return_or
         Token::Var(name) =>
         {
             // Deal with any accessors.
-            let var: Token;
-
             if vars.contains_key(name)
             {
-                var = vars[name].0.clone();
+                let var = vars[name].0.clone();
+                return Ok(Some(var));
             }
             else
             {
                 return Err(format!("Could not find a variable by the name: {}", name));
             }
-
-            return Ok(Some(var));
         },
         Token::Collection(items) =>
         {
@@ -241,6 +238,7 @@ fn handle_token_type(runner: &mut Runner, token: Token, vars: &VarMap, return_or
                                 }
                             }
                         }
+                        // var.var
                         Token::Var(var2) =>
                         {
                             if let Token::Var(var1) = &**prev_token

@@ -31,7 +31,7 @@ impl Runner
                 ExpressionListType::Single =>
                 {
                     let expression = &function.single_op[single_index];
-                    let operation = run_operation(self, &expression.1, &vars);
+                    let operation = run_operation(self, &expression.2, &vars);
 
                     single_index += 1;
 
@@ -77,7 +77,7 @@ impl Runner
                                                 // Make sure not external or change has the same type.
                                                 if !x.1 || Token::variant_equal(&result, &x.0)
                                                 {
-                                                    *x = (result.clone(), x.1);
+                                                    x.0 = result.clone();
                                                 }
 
                                                 // Add an indicator if an external var has changed.
@@ -87,7 +87,9 @@ impl Runner
                                     }
                                     else
                                     {
-                                        vars.insert(string.to_string(), (result, false));
+                                        vars.insert(string.to_string(),
+                                            (result, false, vec![]));
+
                                         local_var_refs.push(string)
                                     }
                                 },

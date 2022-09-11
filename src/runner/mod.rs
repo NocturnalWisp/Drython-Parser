@@ -4,6 +4,7 @@ mod token_impl;
 
 mod internal_function;
 
+use crate::types::VariableModifier;
 use crate::types::ExFnRef;
 use std::collections::HashMap;
 
@@ -43,7 +44,7 @@ impl Runner
 
         while let Some(var) = vars.pop()
         {
-            self.vars.insert(var.0, (var.1, true));
+            self.vars.insert(var.0, (var.1, true, vec![]));
         }
 
         // Include libs
@@ -62,7 +63,7 @@ impl Runner
 
                     while let Some(var) = lib.1.pop()
                     {
-                        self.vars.insert(var.0, (var.1, true));
+                        self.vars.insert(var.0, (var.1, true, vec![]));
                     }
                 },
                 Err(error) =>
@@ -75,17 +76,26 @@ impl Runner
         // Register all variables.
         self.parser.global_expressions.single_op.clone().iter().for_each(|x|
             {
-                let operation = run_operation(self, &x.1, &HashMap::new());
+                let operation = run_operation(self, &x.2, &HashMap::new());
 
                 match operation
                 {
                     Ok(Some(result)) =>
                     {
-                        self.vars.insert(x.0.to_string(), (result, false));
+                        let modifier_list = x.1.iter().map(|x| From::from(x.as_str())).collect::<Vec<VariableModifier>>();
+
+                        for modifier in &modifier_list
+                        {
+                            if let VariableModifier::Unkown(m) = modifier
+                            {
+                                push_error!(error_manager, RuntimeError::new(x.3, None, format!("Unkown modifier '{}' on variable '{}'.", m, x.0).as_str()));
+                            }
+                        }
+                        self.vars.insert(x.0.to_string(), (result, false, modifier_list));
                     }
                     Err(error) =>
                     {
-                        push_error!(error_manager, RuntimeError::new(x.2, None, error.as_str()));
+                        push_error!(error_manager, RuntimeError::new(x.3, None, error.as_str()));
                     }
                     _ => ()
                 }
@@ -163,7 +173,7 @@ impl Runner
                     {
                         arguments.reverse();
                         arg_vars.extend(parsed_arg_names.into_iter()
-                            .map(|x| (x, (arguments.pop().unwrap(), false)))
+                            .map(|x| (x, (arguments.pop().unwrap(), false, vec![])))
                         );
                     }
                     else
@@ -208,7 +218,7 @@ impl Runner
 
         while let Some(var) = additional_library.1.pop()
         {
-            self.vars.insert(var.0, (var.1, true));
+            self.vars.insert(var.0, (var.1, true, vec![]));
         }
         
         self
@@ -216,14 +226,14 @@ impl Runner
 
     pub fn register_variable(&mut self, name: &str, initial_value: Token) -> &mut Self
     {
-        self.vars.insert(name.to_string(), (initial_value, true));
+        self.vars.insert(name.to_string(), (initial_value, true, vec![]));
 
         self
     }
 
     pub fn register_variables(&mut self, map: HashMap<String, Token>) -> &mut Self
     {
-        self.vars.extend(map.into_iter().map(|x| (x.0, (x.1, true))));
+        self.vars.extend(map.into_iter().map(|x| (x.0, (x.1, true, vec![]))));
 
         self
     }

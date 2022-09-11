@@ -21,19 +21,24 @@ pub enum ExpressionListType
     Library,
 }
 
+pub type ScopeInfo = (Option<String>, Option<String>);
+pub type SingleOp = (String, Vec<String>, Vec<Token>, usize);
+pub type MultiOp = (String, Vec<Vec<Token>>, usize);
+pub type Internal = (ExpressionList, usize);
+
 #[derive(Clone, Debug)]
 pub struct ExpressionList
 {
-    pub scope_info: (Option<String>, Option<String>),
+    pub scope_info: ScopeInfo,
     pub size: usize,
     pub line_start: usize,
 
     pub expression_order: Vec<ExpressionListType>,
     // Return, assignment
-    pub single_op: Vec<(String, Vec<Token>, usize)>,
+    pub single_op: Vec<SingleOp>,
     // Function call
-    pub multi_ops: Vec<(String, Vec<Vec<Token>>, usize)>,
-    pub internal_expressions: Vec<(ExpressionList, usize)>,
+    pub multi_ops: Vec<MultiOp>,
+    pub internal_expressions: Vec<Internal>,
     pub includes: HashMap<String, usize>,
 }
 
@@ -87,6 +92,34 @@ pub trait ExFnRef
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 }
 
+#[derive(Debug, Clone)]
+pub enum VariableModifier
+{
+    Unkown(String),
+    // Able to externally reference other scripts.
+    External,
+    // Listable with other public values for external use.
+    Public,
+    // Make the variable non modifiable.
+    Const,
+}
+
+impl From<&str> for VariableModifier
+{
+    fn from(s: &str) -> Self
+    {
+        match s.to_lowercase().as_str()
+        {
+            "external" => VariableModifier::External,
+            "pub"|"public" => VariableModifier::Public,
+            "const"|"constant" => VariableModifier::Const,
+            _ => VariableModifier::Unkown(s.to_string())
+        }
+    }
+}
+
+pub type VarMap = HashMap<String, (Token, bool, Vec<VariableModifier>)>;
+
 pub type BoxedCall = Box<dyn Fn(Option<*mut dyn ExFnRef>, Vec<Token>) -> Result<Option<Token>, String>>;
 pub type DynamicFunctionCall = (Option<*mut dyn ExFnRef>,
                                 Option<BoxedCall>);
@@ -109,5 +142,3 @@ pub struct Runner
     pub vars: VarMap,
     pub var_indexes_changed: Vec<String>,
 }
-
-pub type VarMap = HashMap<String, (Token, bool)>;

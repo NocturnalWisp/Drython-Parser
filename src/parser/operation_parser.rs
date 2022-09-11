@@ -543,7 +543,6 @@ fn handle_populating_operation(mut tokens: Vec<Token>) -> Vec<Token>
 
     for index in (0..map.len()).rev()
     {
-        println!("{:?}", map[&index]);
         if let Token::Operator(op) = &map[&index]
         {
             if let Some(i) = stack.last().copied()

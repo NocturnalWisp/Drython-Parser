@@ -6,7 +6,7 @@ mod call_parser;
 use std::collections::HashMap;
 
 use crate::utility;
-use crate::types::{Token, ExpressionList, error::*, ExpressionListType};
+use crate::types::{Token, ExpressionList, error::*, ExpressionListType, SingleOp, Internal, MultiOp};
 
 use super::variable_parser::parse_var;
 use super::{operation_parser, ExpressionType};
@@ -17,9 +17,9 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
     let mut expression_order: Vec<ExpressionListType> = Vec::new();
     let mut order_pushed_flag = false;
 
-    let mut single_op: Vec<(String, Vec<Token>, usize)> = Vec::new();
-    let mut multi_ops: Vec<(String, Vec<Vec<Token>>, usize)> = Vec::new();
-    let mut internal_expressions: Vec<(ExpressionList, usize)> = Vec::new();
+    let mut single_op: Vec<SingleOp> = Vec::new();
+    let mut multi_ops: Vec<MultiOp> = Vec::new();
+    let mut internal_expressions: Vec<Internal> = Vec::new();
     let mut includes: HashMap<String, usize> = HashMap::new(); 
 
     // For internal expressions lists.
@@ -154,7 +154,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                     {
                         Ok(operation) =>
                         {
-                            single_op.push(("return".to_string(), operation, line_start+i));
+                            single_op.push(("return".to_string(), vec!(), operation, line_start+i));
                             expression_order.push(ExpressionListType::Single);
                             order_pushed_flag = true;
                             operation_index += 1;
@@ -177,11 +177,11 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
                 {
                     Ok(result) => 
                     {
-                        match operation_parser::parse_operation(&result.1)
+                        match operation_parser::parse_operation(&result.2)
                         {
                             Ok(operation) =>
                             {
-                                single_op.push((result.0, operation, line_start+i+1));
+                                single_op.push((result.1, result.0, operation, line_start+i+1));
                                 expression_order.push(ExpressionListType::Single);
                                 order_pushed_flag = true;
                                 operation_index += 1;
@@ -231,7 +231,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
             {
                 if let ExpressionType::Loop = scope_expression
                 {
-                    single_op.push(("break".to_string(), vec![], line_start+i+1));
+                    single_op.push(("break".to_string(), vec![], vec![], line_start+i+1));
                     expression_order.push(ExpressionListType::Single);
                     order_pushed_flag = true;
 
@@ -246,7 +246,7 @@ pub fn parse_expressions(expressions: &Vec<String>, line_start:usize, error_mana
             {
                 if let ExpressionType::Loop = scope_expression
                 {
-                    single_op.push(("continue".to_string(), vec![], line_start+i+1));
+                    single_op.push(("continue".to_string(), vec![], vec![], line_start+i+1));
                     expression_order.push(ExpressionListType::Single);
                     order_pushed_flag = true;
 
@@ -337,7 +337,7 @@ pub fn get_expression_type(string: &str) -> Result<ExpressionType, String>
         {
             match c
             {
-                c if c.is_alphanumeric() || c == '.' || c == '_' => buffer.push(c),
+                c if c.is_alphanumeric() || c == '.' || c == '_' || c == '?' => buffer.push(c),
                 '=' => return Ok(ExpressionType::Assignment),
                 '(' => started_call_or_function = true,
                 c if utility::operations_contains(c) => (),
