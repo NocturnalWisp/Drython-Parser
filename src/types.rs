@@ -76,6 +76,7 @@ pub enum Token
     // Unless debugging.
     Var(String),
     Call(String, String),
+
     Operation(Vec<Token>),
     Operator(String),
     // Accessor stores the accessor after the '.', and the token before.
@@ -92,7 +93,7 @@ pub trait ExFnRef
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum VariableModifier
 {
     Unkown(String),
@@ -102,6 +103,8 @@ pub enum VariableModifier
     Public,
     // Make the variable non modifiable.
     Const,
+    // Define aliases for variables and functions.
+    Alias,
 }
 
 impl From<&str> for VariableModifier
@@ -113,7 +116,23 @@ impl From<&str> for VariableModifier
             "external" => VariableModifier::External,
             "pub"|"public" => VariableModifier::Public,
             "const"|"constant" => VariableModifier::Const,
+            "alias" => VariableModifier::Alias,
             _ => VariableModifier::Unkown(s.to_string())
+        }
+    }
+}
+
+impl VariableModifier
+{
+    pub fn check_scope_allowed(&self) -> bool
+    {
+        match self
+        {
+            VariableModifier::Const => true,
+            VariableModifier::Alias => true,
+            VariableModifier::Public => false,
+            VariableModifier::External => false,
+            _ => false,
         }
     }
 }
@@ -136,6 +155,7 @@ pub struct Operation
 pub struct Runner
 {
     pub parser: Parser,
+
     pub external_functions: HashMap<String, DynamicFunctionCall>,
     // bool - is external var
     // external vars cannot have their types changed.

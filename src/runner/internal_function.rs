@@ -1,3 +1,4 @@
+use crate::runner::VariableModifier;
 use crate::types::{Runner, Token, ExpressionList, ExpressionListType, VarMap};
 
 use super::operation_runner::run_operation;
@@ -87,8 +88,41 @@ impl Runner
                                     }
                                     else
                                     {
-                                        vars.insert(string.to_string(),
-                                            (result, false, vec![]));
+                                        let modifier_list = expression.1.iter().map(|x| From::from(x.as_str())).collect::<Vec<VariableModifier>>();
+
+                                        for modifier in &modifier_list
+                                        {
+                                            if let VariableModifier::Unkown(m) = modifier
+                                            {
+                                               return Err((format!("Unkown modifier '{}' on variable '{}'.", m, string), function.line_start+i+1));
+                                            }
+                                            else if !modifier.check_scope_allowed()
+                                            {
+                                                return Err((format!("Identifier '{:?}' is not allowed inside a scope. Place the variable definition outside a function.", modifier),
+                                                    function.line_start+i+1));
+                                            }
+                                        } 
+
+                                        if modifier_list.contains(&VariableModifier::Alias)
+                                        {
+                                            match &expression.2[0]
+                                            {
+                                                Token::Var(_) | Token::Call(_, _) =>
+                                                {
+                                                    self.vars.insert(string.to_string(), (expression.2[0].clone(), true, vec![]));
+                                                }
+                                                _ =>
+                                                {
+                                                    return Err((format!("Alias modifier expects a reference to another variable/function. Found: '{}'", expression.2[0]),
+                                                        function.line_start+i+1));
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            vars.insert(string.to_string(),
+                                                (result, false, modifier_list));
+                                        }
 
                                         local_var_refs.push(string)
                                     }

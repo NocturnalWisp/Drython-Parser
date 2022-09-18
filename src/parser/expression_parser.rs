@@ -337,7 +337,7 @@ pub fn get_expression_type(string: &str) -> Result<ExpressionType, String>
         {
             match c
             {
-                c if c.is_alphanumeric() || c == '.' || c == '_' || c == '?' => buffer.push(c),
+                c if c.is_alphanumeric() || c == '.' || c == '_' || c == '!' => buffer.push(c),
                 '=' => return Ok(ExpressionType::Assignment),
                 '(' => started_call_or_function = true,
                 c if utility::operations_contains(c) => (),

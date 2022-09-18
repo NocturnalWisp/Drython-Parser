@@ -2,7 +2,7 @@ pub fn parse_var(line: &str) -> Result<(Vec<String>, String, String), String>
 {
     let mut var: (Vec<String>, String, String) = (vec![], "".to_string(), "".to_string());
 
-    let mut identifier_split: Vec<String> = line.split("?").map(|x| x.to_string()).collect();
+    let mut identifier_split: Vec<String> = line.split("!").map(|x| x.to_string()).collect();
 
     if identifier_split.len() == 0
     {

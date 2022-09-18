@@ -88,10 +88,31 @@ impl Runner
                         {
                             if let VariableModifier::Unkown(m) = modifier
                             {
-                                push_error!(error_manager, RuntimeError::new(x.3, None, format!("Unkown modifier '{}' on variable '{}'.", m, x.0).as_str()));
+                                push_error!(error_manager,
+                                    RuntimeError::new(x.3, None, format!("Unkown modifier '{}' on variable '{}'.", m, x.0).as_str()));
                             }
                         }
-                        self.vars.insert(x.0.to_string(), (result, false, modifier_list));
+
+                        if modifier_list.contains(&VariableModifier::Alias)
+                        {
+                            match &x.2[0]
+                            {
+                                Token::Var(_) | Token::Call(_, _) =>
+                                {
+                                    self.vars.insert(x.0.to_string(), (x.2[0].clone(), true, vec![]));
+                                }
+                                _ =>
+                                {
+                                    push_error!(error_manager,
+                                        RuntimeError::new(x.3, None,
+                                            format!("Alias modifier expects a reference to another variable/function. Found: '{}'", x.2[0]).as_str()));
+                                }
+                            }
+                        }
+                        else
+                        {
+                            self.vars.insert(x.0.to_string(), (result, false, modifier_list));
+                        }
                     }
                     Err(error) =>
                     {

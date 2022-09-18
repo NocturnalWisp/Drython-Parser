@@ -68,6 +68,10 @@ pub fn run_operation(runner: &mut Runner, operations: &Vec<Token>,
             }
             Err(error) =>
             {
+                if let Token::Var(_) = token
+                {
+                    return Ok(Some(token));
+                }
                 Err(error)
             }
         }
@@ -147,8 +151,7 @@ fn handle_token_type(runner: &mut Runner, token: Token, vars: &VarMap, return_or
             // Deal with any accessors.
             if vars.contains_key(name)
             {
-                let var = vars[name].0.clone();
-                return Ok(Some(var));
+                return check_alias_chain(runner, &vars[name].0, vars);
             }
             else
             {
@@ -264,6 +267,28 @@ fn handle_token_type(runner: &mut Runner, token: Token, vars: &VarMap, return_or
         }
         _ => Ok(if return_original { Some(token) } else { None })
     }
+}
+
+fn check_alias_chain(runner: &mut Runner, token: &Token, vars: &VarMap) -> Result<Option<Token>, String>
+{
+    if let Token::Var(name) = token
+    {
+        if runner.vars.contains_key(name)
+        {
+            // Check for recursive aliases.
+            return check_alias_chain(runner, &runner.vars[name].0.clone(), vars);
+        }
+        else
+        {
+            return Err(format!("Could not find a variable by the name: {}", name));
+        }
+    }
+    if let Token::Call(_, _) = token
+    {
+        return handle_token_type(runner, token.clone(), &vars, false);
+    }
+    
+    Ok(Some(token.clone()))
 }
 
 fn check_var_chain(token: &Token) -> Option<Result<Option<Token>, String>>
