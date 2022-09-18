@@ -72,56 +72,15 @@ impl Runner
                                     // Check if any of the parent hashmap contains this var.
                                     if vars.contains_key(string)
                                     {
-                                        vars.entry(string.to_string()).and_modify(
-                                            |x|
-                                            {
-                                                // Make sure not external or change has the same type.
-                                                if !x.1 || Token::variant_equal(&result, &x.0)
-                                                {
-                                                    x.0 = result.clone();
-                                                }
-
-                                                // Add an indicator if an external var has changed.
-                                                if x.1 { self.var_indexes_changed.push(string.to_string()); }
-                                            }
-                                        );
+                                        self.handle_change_var_entry(vars, string, result);
                                     }
                                     else
                                     {
                                         let modifier_list = expression.1.iter().map(|x| From::from(x.as_str())).collect::<Vec<VariableModifier>>();
 
-                                        for modifier in &modifier_list
+                                        if let Err(error) = self.handle_variable_modifiers(expression, result, modifier_list, true, Some(vars))
                                         {
-                                            if let VariableModifier::Unkown(m) = modifier
-                                            {
-                                               return Err((format!("Unkown modifier '{}' on variable '{}'.", m, string), function.line_start+i+1));
-                                            }
-                                            else if !modifier.check_scope_allowed()
-                                            {
-                                                return Err((format!("Identifier '{:?}' is not allowed inside a scope. Place the variable definition outside a function.", modifier),
-                                                    function.line_start+i+1));
-                                            }
-                                        } 
-
-                                        if modifier_list.contains(&VariableModifier::Alias)
-                                        {
-                                            match &expression.2[0]
-                                            {
-                                                Token::Var(_) | Token::Call(_, _) =>
-                                                {
-                                                    self.vars.insert(string.to_string(), (expression.2[0].clone(), true, vec![]));
-                                                }
-                                                _ =>
-                                                {
-                                                    return Err((format!("Alias modifier expects a reference to another variable/function. Found: '{}'", expression.2[0]),
-                                                        function.line_start+i+1));
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            vars.insert(string.to_string(),
-                                                (result, false, modifier_list));
+                                            return Err((error, function.line_start+i+1));
                                         }
 
                                         local_var_refs.push(string)
@@ -299,5 +258,42 @@ impl Runner
         }
 
         return_result
+    }
+
+    fn handle_change_var_entry(&mut self, vars: &mut VarMap, entry_name: &str, operation_result: Token)
+    {
+        let mut alter_target: Option<String> = None;
+        vars.entry(entry_name.to_string()).and_modify(
+            |x|
+            {
+                // Make sure not external or change has the same type.
+                if !x.1 || Token::variant_equal(&operation_result, &x.0)
+                {
+                    // Check alias to affect targeted variable.
+                    if !x.2.contains(&VariableModifier::Alias)
+                    {
+                        x.0 = operation_result.clone();
+                    }
+                    else
+                    {
+                        if let Token::Var(targeted_var) = &x.0
+                        {
+                            alter_target = Some(targeted_var.to_string());
+                        }
+                    }
+                }
+
+                // Add an indicator if an external var has changed.
+                if x.1 { self.var_indexes_changed.push(entry_name.to_string()); }
+            }
+        );
+
+        if let Some(target) = alter_target
+        {
+            if vars.contains_key(&target)
+            {
+                self.handle_change_var_entry(vars, &target, operation_result);
+            }
+        }
     }
 }

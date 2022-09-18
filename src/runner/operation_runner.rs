@@ -273,10 +273,10 @@ fn check_alias_chain(runner: &mut Runner, token: &Token, vars: &VarMap) -> Resul
 {
     if let Token::Var(name) = token
     {
-        if runner.vars.contains_key(name)
+        if vars.contains_key(name)
         {
             // Check for recursive aliases.
-            return check_alias_chain(runner, &runner.vars[name].0.clone(), vars);
+            return check_alias_chain(runner, &vars[name].0.clone(), vars);
         }
         else
         {

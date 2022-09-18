@@ -1,4 +1,5 @@
 pub mod operation_runner;
+pub mod modifier_runner;
 pub mod tester;
 mod token_impl;
 
@@ -84,34 +85,10 @@ impl Runner
                     {
                         let modifier_list = x.1.iter().map(|x| From::from(x.as_str())).collect::<Vec<VariableModifier>>();
 
-                        for modifier in &modifier_list
+                        if let Err(error) = self.handle_variable_modifiers(x, result, modifier_list, false, None)
                         {
-                            if let VariableModifier::Unkown(m) = modifier
-                            {
-                                push_error!(error_manager,
-                                    RuntimeError::new(x.3, None, format!("Unkown modifier '{}' on variable '{}'.", m, x.0).as_str()));
-                            }
-                        }
-
-                        if modifier_list.contains(&VariableModifier::Alias)
-                        {
-                            match &x.2[0]
-                            {
-                                Token::Var(_) | Token::Call(_, _) =>
-                                {
-                                    self.vars.insert(x.0.to_string(), (x.2[0].clone(), true, vec![]));
-                                }
-                                _ =>
-                                {
-                                    push_error!(error_manager,
-                                        RuntimeError::new(x.3, None,
-                                            format!("Alias modifier expects a reference to another variable/function. Found: '{}'", x.2[0]).as_str()));
-                                }
-                            }
-                        }
-                        else
-                        {
-                            self.vars.insert(x.0.to_string(), (result, false, modifier_list));
+                            push_error!(error_manager,
+                                RuntimeError::new(x.3, None, error.as_str()));
                         }
                     }
                     Err(error) =>
