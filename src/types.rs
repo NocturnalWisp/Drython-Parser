@@ -74,4 +74,7 @@ pub struct Runner
     // external vars cannot have their types changed.
     pub vars: VarMap,
     pub var_indexes_changed: Vec<String>,
+
+    pub external_scripts: HashMap<String, Box<*mut Runner>>,
+    pub external_script_provider: 
 }

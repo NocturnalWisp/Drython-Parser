@@ -34,10 +34,12 @@ impl Runner
                     if is_scope
                     {
                         scope_var_map.unwrap().insert(variable.0.to_string(), (variable.2[0].clone(), false, vec![VariableModifier::Alias]));
+                        return Ok(());
                     }
                     else
                     {
                         self.vars.insert(variable.0.to_string(), (variable.2[0].clone(), false, vec![VariableModifier::Alias]));
+                        return Ok(());
                     }
                 }
                 _ =>
@@ -46,16 +48,35 @@ impl Runner
                 }
             }
         }
-        else
+
+        // External script reference.
+        if modifier_list.contains(&VariableModifier::External)
         {
-            if is_scope
+            if let Token::String(script_path) = &operation_result
             {
-                scope_var_map.unwrap().insert(variable.0.to_string(), (operation_result, false, modifier_list));
+                if is_scope
+                {
+                    scope_var_map.unwrap().insert(variable.0.to_string(), (Token::, false, modifier_list));
+                }
+                else
+                {
+                    self.vars.insert(variable.0.to_string(), (operation_result, false, modifier_list));
+                }
+                return Ok(());
             }
             else
             {
-                self.vars.insert(variable.0.to_string(), (operation_result, false, modifier_list));
+                return Err(format!("External variables require a string path."));
             }
+        }
+
+        if is_scope
+        {
+            scope_var_map.unwrap().insert(variable.0.to_string(), (operation_result, false, modifier_list));
+        }
+        else
+        {
+            self.vars.insert(variable.0.to_string(), (operation_result, false, modifier_list));
         }
 
         Ok(())
